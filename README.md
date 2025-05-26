@@ -34,5 +34,4 @@ If the extension doesn't work on a particular website:
 
 # Installation
 
-1. Download and install the APK (Winlator_10.0.apk) from [GitHub Releases](https://www.mediafire.com/file/myt5rtk3krymt10/auto_next_songs.zip/file)
-2. Launch the app and wait for the installation process to finish
+1. Download Extension from [Mediafire](https://www.mediafire.com/file/myt5rtk3krymt10/auto_next_songs.zip/file)
