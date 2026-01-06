@@ -1,17 +1,39 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link href='https://cdn.boxicons.com/3.0.6/fonts/brands/boxicons-brands.min.css' rel='stylesheet'>
+    <link href='https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <style>
+        :root {
+            --primary: #2196F3;
+            --muted: #666;
+            --bg: #f6f8fb;
+            --border: #e0e6ed;
+        }
         body {
-            width: 200px;
-            padding: 10px;
+            width: 220px;
+            padding: 12px;
             font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: #111;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         .switch {
             position: relative;
             display: inline-block;
             width: 60px;
-            height: 34px;
+            height: 32px;
         }
         .switch input {
             opacity: 0;
@@ -26,45 +48,87 @@
             right: 0;
             bottom: 0;
             background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
+            transition: .3s;
+            border-radius: 32px;
         }
         .slider:before {
             position: absolute;
             content: "";
-            height: 26px;
-            width: 26px;
+            height: 24px;
+            width: 24px;
             left: 4px;
             bottom: 4px;
             background-color: white;
-            transition: .4s;
+            transition: .3s;
             border-radius: 50%;
         }
         input:checked + .slider {
-            background-color: #2196F3;
+            background-color: var(--primary);
         }
         input:checked + .slider:before {
             transform: translateX(26px);
         }
-        .container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
         .status {
             margin-left: 10px;
             font-weight: bold;
+            color: var(--muted);
+        }
+        .controls {
+            margin-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .control-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+            cursor: pointer;
+            transition: all .2s ease;
+            color: var(--muted);
+        }
+        .control-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 2px 6px rgba(33,150,243,0.2);
+        }
+        .control-btn i {
+            font-size: 20px;
+        }
+        .label {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 6px;
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <label class="switch">
-            <input type="checkbox" id="autoContinueToggle">
-            <span class="slider"></span>
-        </label>
-        <span class="status" id="statusText">Auto Continue</span>
+    <div class="card">
+        <div class="row">
+            <label class="switch">
+                <input type="checkbox" id="autoContinueToggle">
+                <span class="slider"></span>
+            </label>
+            <span class="status" id="statusText">Auto Continue</span>
+        </div>
+        <div class="controls">
+            <button id="prevBtn" class="control-btn" title="Previous">
+                <i class='bx bx-skip-previous'></i>
+            </button>
+            <button id="playPauseBtn" class="control-btn" title="Play/Pause">
+                <i class='bx bx-pause'></i>
+            </button>
+            <button id="nextBtn" class="control-btn" title="Next">
+                <i class='bx bx-skip-next'></i>
+            </button>
+        </div>
     </div>
     <script src="popup.js"></script>
 </body>
-</html> 
+</html>

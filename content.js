@@ -10,12 +10,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'toggleAutoContinue') {
         isAutoContinueEnabled = request.enabled;
         console.log('Auto-continue:', isAutoContinueEnabled ? 'enabled' : 'disabled');
+        sendResponse?.({ success: true });
+        return;
+    }
+
+    if (request.action === 'control') {
+        let handled = false;
+        switch (request.command) {
+            case 'next':
+                handled = clickNextButton(true);
+                break;
+            case 'prev':
+                handled = clickPrevButton();
+                break;
+            case 'togglePlayPause':
+                handled = togglePlayPause();
+                break;
+            default:
+                break;
+        }
+        sendResponse?.({ success: handled });
     }
 });
 
 // Function to find and click the next button
-function clickNextButton() {
-    if (!isAutoContinueEnabled) return false;
+function clickNextButton(force = false) {
+    if (!isAutoContinueEnabled && !force) return false;
 
     // First try to find and click the blue-framed video
     const blueFramedVideo = document.querySelector('ytd-compact-video-renderer[style*="border: 2px solid blue"]');
@@ -57,6 +77,74 @@ function clickNextButton() {
     return false;
 }
 
+// Function to find and click the previous button
+function clickPrevButton() {
+    // Allow manual prev even if auto-continue is off
+    const prevSelectors = [
+        // YouTube Music
+        'ytmusic-player-bar .previous-button',
+        'ytmusic-player-bar [aria-label="Previous song"]',
+        // YouTube
+        '.ytp-prev-button',
+        'button[aria-label="Previous"]',
+        // Common selectors
+        '[aria-label="Previous"]',
+        '.prev-button',
+        '.skip-back',
+        '.previous'
+    ];
+
+    for (const selector of prevSelectors) {
+        const prevButton = document.querySelector(selector);
+        if (prevButton) {
+            prevButton.click();
+            console.log('Auto-continue: Previous button clicked');
+            return true;
+        }
+    }
+    return false;
+}
+
+// Function to toggle play/pause
+function togglePlayPause() {
+    const media = document.querySelector('video, audio');
+    if (media) {
+        if (media.paused) {
+            media.play();
+            console.log('Auto-continue: Media play triggered');
+        } else {
+            media.pause();
+            console.log('Auto-continue: Media pause triggered');
+        }
+        return true;
+    }
+
+    const playPauseSelectors = [
+        // YouTube Music
+        'ytmusic-player-bar .play-pause-button',
+        // YouTube
+        '.ytp-play-button',
+        'button[aria-label="Play"]',
+        'button[aria-label="Pause"]',
+        // Common selectors
+        '.play-button',
+        '.pause-button',
+        '[aria-label="Play"]',
+        '[aria-label="Pause"]'
+    ];
+
+    for (const selector of playPauseSelectors) {
+        const btn = document.querySelector(selector);
+        if (btn) {
+            btn.click();
+            console.log('Auto-continue: Play/Pause toggled via button');
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Function to check if the current song has ended
 function checkSongEnd() {
     if (!isAutoContinueEnabled) return;
@@ -74,7 +162,7 @@ function checkSongEnd() {
     if (playerBar) {
         const progressBar = playerBar.querySelector('#progress-bar');
         if (progressBar && progressBar.getAttribute('value') === '100') {
-            console.log('Auto-continue: YouTube Music song ended');setTimeout
+            console.log('Auto-continue: YouTube Music song ended');
             clickNextButton();
             return;
         }
