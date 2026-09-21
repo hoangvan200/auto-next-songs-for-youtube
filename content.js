@@ -1,16 +1,26 @@
 (() => {
   let autoContinueEnabled = true;
+  let audioOnlyEnabled = false;
   let lastAdvanceAt = 0;
   let lastMedia = null;
   let lastVideoKey = '';
   let recoveryTimer = null;
   let metadataTimer = null;
 
-  chrome.storage.sync.get({ autoContinueEnabled: true }, ({ autoContinueEnabled: enabled }) => {
-    autoContinueEnabled = enabled;
+  chrome.storage.sync.get({ autoContinueEnabled: true, audioOnlyEnabled: false }, (state) => {
+    autoContinueEnabled = state.autoContinueEnabled;
+    audioOnlyEnabled = state.audioOnlyEnabled;
+    updateAudioOnlyUI(audioOnlyEnabled);
   });
 
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'toggleAudioOnly') {
+      audioOnlyEnabled = Boolean(request.enabled);
+      updateAudioOnlyUI(audioOnlyEnabled);
+      sendResponse({ success: true });
+      return;
+    }
+
     if (request.action === 'toggleAutoContinue') {
       autoContinueEnabled = Boolean(request.enabled);
       sendResponse({ success: true });
@@ -104,7 +114,49 @@
 
   function sendVideoInfo(info = getVideoInfo(), reason = 'navigation') {
     if (!info) return;
+    updateAudioOnlyUI(audioOnlyEnabled);
     chrome.runtime.sendMessage({ action: 'videoInfoUpdated', info, reason }, () => void chrome.runtime.lastError);
+  }
+
+  function updateAudioOnlyUI(enabled) {
+    let overlay = document.getElementById('auto-next-audio-only-overlay');
+    if (!enabled) {
+      if (overlay) overlay.style.display = 'none';
+      const video = document.querySelector('video');
+      if (video) video.style.opacity = '1';
+      return;
+    }
+
+    const player = document.querySelector('.html5-video-player') || document.querySelector('ytmusic-player');
+    if (!player) return;
+
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'auto-next-audio-only-overlay';
+      overlay.style.position = 'absolute';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100%';
+      overlay.style.height = '100%';
+      overlay.style.backgroundColor = '#000';
+      overlay.style.backgroundSize = 'contain';
+      overlay.style.backgroundPosition = 'center';
+      overlay.style.backgroundRepeat = 'no-repeat';
+      overlay.style.zIndex = '10';
+      overlay.style.pointerEvents = 'none';
+      player.appendChild(overlay);
+    }
+
+    const info = getVideoInfo();
+    if (info.videoId) {
+      const maxResUrl = `https://i.ytimg.com/vi/${info.videoId}/maxresdefault.jpg`;
+      const hqUrl = `https://i.ytimg.com/vi/${info.videoId}/hqdefault.jpg`;
+      overlay.style.backgroundImage = `url('${maxResUrl}'), url('${hqUrl}')`;
+    }
+    
+    overlay.style.display = 'block';
+    const video = document.querySelector('video');
+    if (video) video.style.opacity = '0';
   }
 
   function getVideoInfo() {

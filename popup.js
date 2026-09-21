@@ -7,10 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoMeta = document.getElementById('videoMeta');
   const themeToggle = document.getElementById('themeToggle');
   const downloadThumbnailBtn = document.getElementById('downloadThumbnailBtn');
+  const audioOnlyToggle = document.getElementById('audioOnlyToggle');
   let currentVideoId = '';
 
-  chrome.storage.sync.get({ autoContinueEnabled: true, theme: 'dark' }, ({ autoContinueEnabled, theme }) => {
+  chrome.storage.sync.get({ autoContinueEnabled: true, theme: 'dark', audioOnlyEnabled: false }, ({ autoContinueEnabled, theme, audioOnlyEnabled }) => {
     toggle.checked = autoContinueEnabled;
+    audioOnlyToggle.checked = audioOnlyEnabled;
     themeToggle.checked = theme === 'light';
     document.documentElement.classList.toggle('light', theme === 'light');
     renderState();
@@ -27,6 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.set({ autoContinueEnabled: enabled }, renderState);
     chrome.runtime.sendMessage({ action: 'setIconState', enabled });
     broadcast({ action: 'toggleAutoContinue', enabled });
+  });
+
+  audioOnlyToggle.addEventListener('change', () => {
+    const enabled = audioOnlyToggle.checked;
+    chrome.storage.sync.set({ audioOnlyEnabled: enabled });
+    chrome.runtime.sendMessage({ action: 'setAudioOnlyState', enabled });
+    broadcast({ action: 'toggleAudioOnly', enabled });
   });
 
   themeToggle.addEventListener('change', () => {

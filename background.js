@@ -11,25 +11,49 @@ const ICONS = {
   }
 };
 
+const AUDIO_ONLY_RULE_ID = 1;
+
+function updateAudioOnlyRule(enabled) {
+  if (enabled) {
+    chrome.declarativeNetRequest.updateDynamicRules({
+      addRules: [{
+        id: AUDIO_ONLY_RULE_ID,
+        priority: 1,
+        action: { type: 'block' },
+        condition: {
+          urlFilter: 'mime=video',
+          domains: ['googlevideo.com']
+        }
+      }],
+      removeRuleIds: [AUDIO_ONLY_RULE_ID]
+    });
+  } else {
+    chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: [AUDIO_ONLY_RULE_ID]
+    });
+  }
+}
+
 function setIconState(enabled) {
   chrome.action.setIcon({ path: enabled ? ICONS.enabled : ICONS.disabled });
 }
 
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.get({ autoContinueEnabled: true }, ({ autoContinueEnabled }) => {
-    setIconState(autoContinueEnabled);
+function initializeState() {
+  chrome.storage.sync.get({ autoContinueEnabled: true, audioOnlyEnabled: false }, (state) => {
+    setIconState(state.autoContinueEnabled);
+    updateAudioOnlyRule(state.audioOnlyEnabled);
   });
-});
+}
 
-chrome.runtime.onStartup.addListener(() => {
-  chrome.storage.sync.get({ autoContinueEnabled: true }, ({ autoContinueEnabled }) => {
-    setIconState(autoContinueEnabled);
-  });
-});
+chrome.runtime.onInstalled.addListener(initializeState);
+chrome.runtime.onStartup.addListener(initializeState);
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'setIconState') {
     setIconState(Boolean(request.enabled));
+    sendResponse({ success: true });
+  } else if (request.action === 'setAudioOnlyState') {
+    updateAudioOnlyRule(Boolean(request.enabled));
     sendResponse({ success: true });
   }
 });
