@@ -1,32 +1,32 @@
-# Auto Continue Videos For Youtube Extension
+# Auto Next Songs for YouTube
 
-Automatically continue or control playback on YouTube / YouTube Music.
+Automatically continue to the next video or song on YouTube and YouTube Music, with lightweight playback controls in the extension popup.
 
 ## Features
-- Auto-continue when a video/song ends (toggle on/off)
-- Popup controls: previous, play/pause, next
-- Disabled/enabled toolbar icon state
-- Supports YouTube & YouTube Music
 
-## Installation (unpacked)
-1. Download or clone this repository
-2. Open Chrome and go to `chrome://extensions/`
-3. Enable "Developer mode" in the top right corner
-4. Click "Load unpacked" and select the extension directory
+- Automatic next playback when a video or song ends.
+- Previous, play/pause, and next controls for the active YouTube tab.
+- Enabled and disabled toolbar icon states.
+- Dark popup UI with a compact layout inspired by the supplied reference image.
+- No third-party CDN or remote code dependency.
+- Refresh fallback after an automatic transition when no playing media player is detected for five seconds.
+- Current video title, channel, and thumbnail synchronized to the popup after navigation or popup controls.
 
-## Using the popup
-- Toggle switch: enable/disable auto-continue (icon turns gray when off)
-- Prev / Play-Pause / Next buttons: send controls to the active YouTube tab
+## Compatibility
 
-## How it Works
-1. Monitors the YouTube player for end-of-playback
-2. Clicks the next/previous controls or marked blue-frame video
-3. Optional manual controls via the popup
+The extension uses **Manifest V3**, the supported Chrome extension manifest format. Chrome does not currently support a `manifest_version: 4` value; setting that value would prevent the extension from loading. The extension release is version **4.1.0** for the playback recovery and popup synchronization update.
+
+## Installation
+
+1. Clone or download this repository.
+2. Open Chrome and navigate to `chrome://extensions/`.
+3. Enable **Developer mode**.
+4. Choose **Load unpacked** and select the repository directory.
+
+## Usage
+
+Open YouTube or YouTube Music, then select the extension icon. Use the switch to enable or disable auto-next. The playback buttons control the active YouTube tab. The icon becomes gray when auto-next is disabled.
 
 ## Troubleshooting
-- Ensure the page is YouTube or YouTube Music
-- If auto-continue is off, turn it on in the popup
-- Refresh the page if controls don’t respond
 
-## Download zip
-Download Extension from [Mediafire](https://www.mediafire.com/file/myt5rtk3krymt10/auto_next_songs.zip/file)
+The extension only injects into YouTube and YouTube Music pages. If a control does not respond, open a supported tab and refresh it once so the content script can initialize. Browser autoplay restrictions may still require one manual play action.

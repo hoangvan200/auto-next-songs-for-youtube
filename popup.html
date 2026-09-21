@@ -1,134 +1,135 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <link href='https://cdn.boxicons.com/3.0.6/fonts/brands/boxicons-brands.min.css' rel='stylesheet'>
-    <link href='https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <style>
-        :root {
-            --primary: #2196F3;
-            --muted: #666;
-            --bg: #f6f8fb;
-            --border: #e0e6ed;
-        }
-        body {
-            width: 220px;
-            padding: 12px;
-            font-family: Arial, sans-serif;
-            background: var(--bg);
-            color: #111;
-        }
-        .card {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 32px;
-        }
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .3s;
-            border-radius: 32px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 24px;
-            width: 24px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: var(--primary);
-        }
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-        .status {
-            margin-left: 10px;
-            font-weight: bold;
-            color: var(--muted);
-        }
-        .controls {
-            margin-top: 12px;
-            display: flex;
-            justify-content: space-between;
-            gap: 8px;
-        }
-        .control-btn {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: #fff;
-            cursor: pointer;
-            transition: all .2s ease;
-            color: var(--muted);
-        }
-        .control-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-            box-shadow: 0 2px 6px rgba(33,150,243,0.2);
-        }
-        .control-btn i {
-            font-size: 20px;
-        }
-        .label {
-            font-size: 12px;
-            color: var(--muted);
-            margin-bottom: 6px;
-            display: block;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auto next</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050505;
+      --panel: #111216;
+      --panel-raised: #202228;
+      --text: #f4f5f7;
+      --muted: #979ba7;
+      --accent: #73a7ff;
+      --accent-soft: rgba(115, 167, 255, .18);
+      --stroke: rgba(255, 255, 255, .12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      width: 360px;
+      min-height: 220px;
+      margin: 0;
+      padding: 18px;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.35 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .shell { display: grid; gap: 20px; }
+
+    .preview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .thumbnail {
+      width: 145px;
+      height: 92px;
+      flex: 0 0 auto;
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      background: #a7a7a7;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.08);
+    }
+
+    .thumbnail img { display: none; width: 100%; height: 100%; object-fit: cover; }
+    .thumbnail.has-image::before, .thumbnail.has-image::after, .thumbnail.has-image .sun { display: none; }
+
+    .thumbnail::before {
+      content: "";
+      position: absolute;
+      left: 18px;
+      top: 18px;
+      width: 108px;
+      height: 61px;
+      border-radius: 8px;
+      background: #444548;
+    }
+
+    .thumbnail::after {
+      content: "";
+      position: absolute;
+      left: 28px;
+      bottom: 27px;
+      width: 82px;
+      height: 27px;
+      background: #a7a7a7;
+      clip-path: polygon(0 100%, 0 60%, 30% 0, 48% 52%, 68% 7%, 100% 71%, 100% 100%);
+    }
+
+    .sun { position: absolute; z-index: 1; top: 29px; left: 36px; width: 18px; height: 18px; border-radius: 50%; background: #bdbdbd; }
+
+    .preview-copy strong { display: block; color: #fff; font-size: 15px; font-weight: 650; }
+    .preview-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+
+    .settings { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .setting-label { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .setting-label strong { color: var(--accent); font-size: 18px; font-weight: 500; letter-spacing: -.02em; }
+    .status { margin-top: 2px; color: var(--muted); font-size: 11px; }
+
+    .switch { position: relative; width: 54px; height: 30px; flex: 0 0 auto; }
+    .switch input { position: absolute; opacity: 0; pointer-events: none; }
+    .track { display: block; width: 54px; height: 30px; padding: 3px; cursor: pointer; border: 1px solid var(--stroke); border-radius: 999px; background: #2a2d33; transition: .2s ease; }
+    .track::after { content: ""; display: block; width: 22px; height: 22px; border-radius: 50%; background: #aeb1b8; transition: .2s ease; }
+    input:checked + .track { border-color: rgba(115,167,255,.55); background: var(--accent-soft); }
+    input:checked + .track::after { transform: translateX(24px); background: var(--accent); box-shadow: 0 0 12px rgba(115,167,255,.55); }
+    input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    button { min-height: 36px; border: 1px solid var(--stroke); border-radius: 9px; background: var(--panel); color: var(--muted); cursor: pointer; font: inherit; transition: .15s ease; }
+    button:hover { border-color: rgba(115,167,255,.55); color: var(--text); background: var(--panel-raised); }
+    button:active { transform: translateY(1px); }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .icon { font-size: 18px; line-height: 1; }
+  </style>
 </head>
 <body>
-    <div class="card">
-        <div class="row">
-            <label class="switch">
-                <input type="checkbox" id="autoContinueToggle">
-                <span class="slider"></span>
-            </label>
-            <span class="status" id="statusText">Auto Continue</span>
+  <main class="shell">
+    <section class="preview" aria-label="Extension preview">
+      <div id="thumbnail" class="thumbnail" aria-hidden="true"><span class="sun"></span><img id="videoThumbnail" alt=""></div>
+      <div class="preview-copy">
+        <strong id="videoTitle">Auto next</strong>
+        <span id="videoMeta">YouTube / YouTube Music</span>
+      </div>
+    </section>
+
+    <section class="settings">
+      <div class="setting-label">
+        <div>
+          <strong>Auto next</strong>
+          <div id="statusText" class="status" role="status">Loading…</div>
         </div>
-        <div class="controls">
-            <button id="prevBtn" class="control-btn" title="Previous">
-                <i class='bx bx-skip-previous'></i>
-            </button>
-            <button id="playPauseBtn" class="control-btn" title="Play/Pause">
-                <i class='bx bx-pause'></i>
-            </button>
-            <button id="nextBtn" class="control-btn" title="Next">
-                <i class='bx bx-skip-next'></i>
-            </button>
-        </div>
-    </div>
-    <script src="popup.js"></script>
+      </div>
+      <label class="switch" title="Toggle automatic next playback">
+        <input id="autoContinueToggle" type="checkbox" aria-label="Enable auto next">
+        <span class="track"></span>
+      </label>
+    </section>
+
+    <nav class="controls" aria-label="Playback controls">
+      <button id="prevBtn" type="button" title="Previous song"><span class="icon" aria-hidden="true">‹‹</span><span class="sr-only">Previous</span></button>
+      <button id="playPauseBtn" type="button" title="Play or pause"><span id="playPauseIcon" class="icon" aria-hidden="true">▶</span><span class="sr-only">Play or pause</span></button>
+      <button id="nextBtn" type="button" title="Next song"><span class="icon" aria-hidden="true">››</span><span class="sr-only">Next</span></button>
+    </nav>
+  </main>
+  <script src="popup.js"></script>
 </body>
 </html>

@@ -1,197 +1,231 @@
-let isAutoContinueEnabled = true;
+(() => {
+  let autoContinueEnabled = true;
+  let lastAdvanceAt = 0;
+  let lastMedia = null;
+  let lastVideoKey = '';
+  let recoveryTimer = null;
+  let metadataTimer = null;
 
-// Load initial state from storage
-chrome.storage.sync.get(['autoContinueEnabled'], function(result) {
-    isAutoContinueEnabled = result.autoContinueEnabled !== false;
-});
+  chrome.storage.sync.get({ autoContinueEnabled: true }, ({ autoContinueEnabled: enabled }) => {
+    autoContinueEnabled = enabled;
+  });
 
-// Listen for toggle changes
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'toggleAutoContinue') {
-        isAutoContinueEnabled = request.enabled;
-        console.log('Auto-continue:', isAutoContinueEnabled ? 'enabled' : 'disabled');
-        sendResponse?.({ success: true });
-        return;
+      autoContinueEnabled = Boolean(request.enabled);
+      sendResponse({ success: true });
+      return;
+    }
+
+    if (request.action === 'getVideoInfo') {
+      sendResponse({ success: true, info: getVideoInfo() });
+      return;
     }
 
     if (request.action === 'control') {
-        let handled = false;
-        switch (request.command) {
-            case 'next':
-                handled = clickNextButton(true);
-                break;
-            case 'prev':
-                handled = clickPrevButton();
-                break;
-            case 'togglePlayPause':
-                handled = togglePlayPause();
-                break;
-            default:
-                break;
-        }
-        sendResponse?.({ success: handled });
+      const handlers = {
+        next: () => clickNextButton({ force: true, source: 'popup' }),
+        prev: clickPreviousButton,
+        togglePlayPause
+      };
+      const handler = handlers[request.command];
+      sendResponse({ success: Boolean(handler && handler()) });
     }
-});
+  });
 
-// Function to find and click the next button
-function clickNextButton(force = false) {
-    if (!isAutoContinueEnabled && !force) return false;
+  function clickNextButton({ force = false, source = 'auto' } = {}) {
+    if (!force && !autoContinueEnabled) return false;
+    const now = Date.now();
+    if (!force && now - lastAdvanceAt < 2500) return false;
 
-    // First try to find and click the blue-framed video
-    const blueFramedVideo = document.querySelector('ytd-compact-video-renderer[style*="border: 2px solid blue"]');
-    if (blueFramedVideo) {
-        const videoLink = blueFramedVideo.querySelector('a#thumbnail');
-        if (videoLink) {
-            videoLink.click();
-            console.log('Auto-continue: Blue-framed video clicked');
-            return true;
-        }
-    }
-
-    // If no blue-framed video found, try YouTube specific selectors
-    const youtubeSelectors = [
-        // YouTube Music
-        'ytmusic-player-bar .next-button',
-        'ytmusic-player-bar [aria-label="Next song"]',
-        // YouTube
-        '.ytp-next-button',
-        'button[aria-label="Next"]',
-        // Common selectors
-        '[aria-label="Next"]',
-        '[aria-label="Next track"]',
-        '.next-button',
-        '.skip-forward',
-        '.next',
-        'button[title="Next"]',
-        'button[title="Next track"]'
+    const selectors = [
+      'ytmusic-player-bar .next-button',
+      'ytmusic-player-bar [aria-label*="Next"]',
+      '.ytp-next-button',
+      'button[aria-label^="Next"]',
+      '[aria-label="Next track"]',
+      '[title="Next"]',
+      '[title="Next track"]',
+      '.next-button'
     ];
 
-    for (const selector of youtubeSelectors) {
-        const nextButton = document.querySelector(selector);
-        if (nextButton) {
-            nextButton.click();
-            console.log('Auto-continue: Next button clicked');
-            return true;
-        }
+    const previousKey = getVideoKey();
+    for (const selector of selectors) {
+      const button = document.querySelector(selector);
+      if (isUsable(button)) {
+        button.click();
+        markAdvanced(now, previousKey, source);
+        return true;
+      }
+    }
+
+    // YouTube's playlist sidebar sometimes marks the upcoming item instead of
+    // exposing a stable next-button selector.
+    const markedVideo = document.querySelector('ytd-compact-video-renderer[style*="border"] a#thumbnail');
+    if (isUsable(markedVideo)) {
+      markedVideo.click();
+      markAdvanced(now, previousKey, source);
+      return true;
     }
     return false;
-}
+  }
 
-// Function to find and click the previous button
-function clickPrevButton() {
-    // Allow manual prev even if auto-continue is off
-    const prevSelectors = [
-        // YouTube Music
-        'ytmusic-player-bar .previous-button',
-        'ytmusic-player-bar [aria-label="Previous song"]',
-        // YouTube
-        '.ytp-prev-button',
-        'button[aria-label="Previous"]',
-        // Common selectors
-        '[aria-label="Previous"]',
-        '.prev-button',
-        '.skip-back',
-        '.previous'
+  function markAdvanced(now, previousKey, source) {
+    lastAdvanceAt = now;
+    notifyVideoInfoWhenReady(previousKey, source);
+    if (source === 'auto') schedulePlaybackRecovery();
+  }
+
+  function schedulePlaybackRecovery() {
+    if (recoveryTimer) clearTimeout(recoveryTimer);
+    recoveryTimer = setTimeout(() => {
+      recoveryTimer = null;
+      const media = document.querySelector('video, audio');
+      if (!media || media.ended || media.paused || !isMediaReady(media)) {
+        window.location.reload();
+      }
+    }, 5000);
+  }
+
+  function notifyVideoInfoWhenReady(previousKey, reason) {
+    if (metadataTimer) clearInterval(metadataTimer);
+    let attempts = 0;
+    metadataTimer = setInterval(() => {
+      attempts += 1;
+      const info = getVideoInfo();
+      const changed = info.key && info.key !== previousKey;
+      if (changed || attempts >= 28) {
+        clearInterval(metadataTimer);
+        metadataTimer = null;
+        sendVideoInfo(info, reason);
+      }
+    }, 250);
+  }
+
+  function sendVideoInfo(info = getVideoInfo(), reason = 'navigation') {
+    if (!info) return;
+    chrome.runtime.sendMessage({ action: 'videoInfoUpdated', info, reason }, () => void chrome.runtime.lastError);
+  }
+
+  function getVideoInfo() {
+    const media = document.querySelector('video, audio');
+    const videoId = new URLSearchParams(window.location.search).get('v') || getMusicVideoId();
+    const title = firstText([
+      'h1.ytd-watch-metadata',
+      'h1.title',
+      'ytmusic-player-bar .title',
+      'ytmusic-player-bar .title a'
+    ]) || document.title.replace(/\s*-\s*YouTube(?: Music)?\s*$/i, '').trim();
+    const channel = firstText([
+      '#owner #channel-name a',
+      'ytd-video-owner-renderer a',
+      'ytmusic-player-bar .byline'
+    ]);
+    const thumbnail = videoId ? `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/mqdefault.jpg` : '';
+
+    return {
+      key: videoId || window.location.href,
+      url: window.location.href,
+      videoId: videoId || '',
+      title: title || 'YouTube',
+      channel: channel || 'YouTube',
+      thumbnail,
+      isPlaying: Boolean(media && !media.paused && !media.ended),
+      hasPlayer: Boolean(media),
+      duration: media?.duration && Number.isFinite(media.duration) ? media.duration : 0,
+      currentTime: media?.currentTime && Number.isFinite(media.currentTime) ? media.currentTime : 0
+    };
+  }
+
+  function getMusicVideoId() {
+    const match = document.querySelector('ytmusic-player-bar a[href*="watch?v="]')?.href?.match(/[?&]v=([^&]+)/);
+    return match ? match[1] : '';
+  }
+
+  function firstText(selectors) {
+    for (const selector of selectors) {
+      const element = document.querySelector(selector);
+      const value = element?.textContent?.trim();
+      if (value) return value;
+    }
+    return '';
+  }
+
+  function getVideoKey() {
+    return getVideoInfo().key;
+  }
+
+  function clickPreviousButton() {
+    const selectors = [
+      'ytmusic-player-bar .previous-button',
+      'ytmusic-player-bar [aria-label*="Previous"]',
+      '.ytp-prev-button',
+      'button[aria-label^="Previous"]',
+      '[aria-label="Previous track"]',
+      '[title="Previous"]',
+      '[title="Previous track"]'
     ];
-
-    for (const selector of prevSelectors) {
-        const prevButton = document.querySelector(selector);
-        if (prevButton) {
-            prevButton.click();
-            console.log('Auto-continue: Previous button clicked');
-            return true;
-        }
+    for (const selector of selectors) {
+      const button = document.querySelector(selector);
+      if (isUsable(button)) {
+        button.click();
+        notifyVideoInfoWhenReady(getVideoKey(), 'popup-previous');
+        return true;
+      }
     }
     return false;
-}
+  }
 
-// Function to toggle play/pause
-function togglePlayPause() {
+  function togglePlayPause() {
     const media = document.querySelector('video, audio');
     if (media) {
-        if (media.paused) {
-            media.play();
-            console.log('Auto-continue: Media play triggered');
-        } else {
-            media.pause();
-            console.log('Auto-continue: Media pause triggered');
-        }
-        return true;
+      if (media.paused) {
+        const playResult = media.play();
+        if (playResult?.catch) playResult.catch(() => {});
+      } else {
+        media.pause();
+      }
+      sendVideoInfo(getVideoInfo(), 'popup-play-pause');
+      return true;
     }
 
-    const playPauseSelectors = [
-        // YouTube Music
-        'ytmusic-player-bar .play-pause-button',
-        // YouTube
-        '.ytp-play-button',
-        'button[aria-label="Play"]',
-        'button[aria-label="Pause"]',
-        // Common selectors
-        '.play-button',
-        '.pause-button',
-        '[aria-label="Play"]',
-        '[aria-label="Pause"]'
-    ];
-
-    for (const selector of playPauseSelectors) {
-        const btn = document.querySelector(selector);
-        if (btn) {
-            btn.click();
-            console.log('Auto-continue: Play/Pause toggled via button');
-            return true;
-        }
+    const button = document.querySelector(
+      'ytmusic-player-bar .play-pause-button, .ytp-play-button, button[aria-label^="Play"], button[aria-label^="Pause"]'
+    );
+    if (isUsable(button)) {
+      button.click();
+      sendVideoInfo(getVideoInfo(), 'popup-play-pause');
+      return true;
     }
-
     return false;
-}
+  }
 
-// Function to check if the current song has ended
-function checkSongEnd() {
-    if (!isAutoContinueEnabled) return;
+  function isUsable(element) {
+    return Boolean(element && !element.disabled && element.getAttribute('aria-disabled') !== 'true');
+  }
 
-    // Check YouTube video player
-    const videoPlayer = document.querySelector('video');
-    if (videoPlayer && videoPlayer.ended) {
-        console.log('Auto-continue: YouTube video ended');
-        clickNextButton();
-        return;
+  function isMediaReady(media) {
+    return media.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && media.currentSrc;
+  }
+
+  function checkPlaybackEnd() {
+    const media = document.querySelector('video, audio');
+    if (media && media !== lastMedia) {
+      lastMedia = media;
+      media.addEventListener('ended', () => clickNextButton(), { passive: true });
+      sendVideoInfo(getVideoInfo(), 'media-ready');
     }
+    if (media?.ended) clickNextButton();
+  }
 
-    // Check for YouTube Music player state
-    const playerBar = document.querySelector('ytmusic-player-bar');
-    if (playerBar) {
-        const progressBar = playerBar.querySelector('#progress-bar');
-        if (progressBar && progressBar.getAttribute('value') === '100') {
-            console.log('Auto-continue: YouTube Music song ended');
-            clickNextButton();
-            return;
-        }
-    }
-}
-
-// Set up interval to check for song end
-setInterval(checkSongEnd, 1000);
-
-// Listen for YouTube specific events
-document.addEventListener('yt-navigate-finish', () => {
-    console.log('Auto-continue: YouTube page navigation finished');
-    // Re-initialize checks after navigation
-    checkSongEnd();
-});
-
-// Listen for media events
-document.addEventListener('ended', () => {
-    console.log('Auto-continue: Media ended event detected');
-    clickNextButton();
-    
-    // Refresh the page after a short delay
-    setTimeout(() => {
-        window.location.reload();
-    }, 2000); // Wait 2 seconds before refreshing
-});
-
-// Listen for custom events from music players
-document.addEventListener('songEnded', () => {
-    console.log('Auto-continue: Song ended event detected');
-    clickNextButton();
-}); 
+  document.addEventListener('ended', (event) => {
+    if (event.target instanceof HTMLMediaElement) clickNextButton();
+  }, true);
+  document.addEventListener('yt-navigate-finish', () => {
+    checkPlaybackEnd();
+    sendVideoInfo(getVideoInfo(), 'navigation');
+  }, { passive: true });
+  setInterval(checkPlaybackEnd, 1500);
+  checkPlaybackEnd();
+  sendVideoInfo(getVideoInfo(), 'initial');
+})();

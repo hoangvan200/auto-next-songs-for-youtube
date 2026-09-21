@@ -1,18 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "Auto Continue Video for Youtube",
-  "version": "1.0",
-  "description": "Automatically continues to the next video when the current one ends on YouTube and YouTube Music",
+  "name": "Auto Next Songs for YouTube",
+  "version": "4.1.0",
+  "description": "Automatically continue to the next video or song on YouTube and YouTube Music.",
   "permissions": [
-    "scripting",
-    "tabs",
     "storage"
   ],
   "host_permissions": [
-    "https://*.youtube.com/*",
-    "https://music.youtube.com/*"
+    "https://www.youtube.com/*",
+    "https://m.youtube.com/*",
+    "https://music.youtube.com/*",
+    "https://youtube.com/*",
+    "https://i.ytimg.com/*"
   ],
   "action": {
+    "default_title": "Auto next for YouTube",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -21,15 +23,19 @@
     }
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
       "matches": [
-        "https://*.youtube.com/*",
-        "https://music.youtube.com/*"
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*",
+        "https://music.youtube.com/*",
+        "https://youtube.com/*"
       ],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
   ],
   "icons": {
@@ -37,4 +43,4 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   }
-} 
+}
