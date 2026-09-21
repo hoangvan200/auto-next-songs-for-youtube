@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoTitle = document.getElementById('videoTitle');
   const videoMeta = document.getElementById('videoMeta');
   const themeToggle = document.getElementById('themeToggle');
-  const volumeSlider = document.getElementById('volumeSlider');
 
   chrome.storage.sync.get({ autoContinueEnabled: true, theme: 'dark' }, ({ autoContinueEnabled, theme }) => {
     toggle.checked = autoContinueEnabled;
@@ -39,9 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('nextBtn').addEventListener('click', () => sendControlCommand('next'));
   document.getElementById('playPauseBtn').addEventListener('click', () => sendControlCommand('togglePlayPause'));
 
-  volumeSlider.addEventListener('input', () => {
-    sendControlCommand('setVolume', { volume: volumeSlider.value / 100 });
-  });
 
   requestVideoInfo();
 
@@ -59,10 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const playPauseIcon = document.getElementById('playPauseIcon');
     if (playPauseIcon) {
       playPauseIcon.textContent = info.isPlaying ? '⏸' : '▶';
-    }
-
-    if (info.volume !== undefined) {
-      volumeSlider.value = info.volume * 100;
     }
 
     if (info.thumbnail) {

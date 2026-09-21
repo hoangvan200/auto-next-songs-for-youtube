@@ -26,8 +26,7 @@
       const handlers = {
         next: () => clickNextButton({ force: true, source: 'popup' }),
         prev: clickPreviousButton,
-        togglePlayPause,
-        setVolume: () => setMediaVolume(request.volume)
+        togglePlayPause
       };
       const handler = handlers[request.command];
       sendResponse({ success: Boolean(handler && handler()) });
@@ -133,7 +132,6 @@
       thumbnail,
       isPlaying: Boolean(media && !media.paused && !media.ended),
       hasPlayer: Boolean(media),
-      volume: media ? (media.muted ? 0 : media.volume) : 1,
       duration: media?.duration && Number.isFinite(media.duration) ? media.duration : 0,
       currentTime: media?.currentTime && Number.isFinite(media.currentTime) ? media.currentTime : 0
     };
@@ -202,21 +200,6 @@
     return false;
   }
 
-  function setMediaVolume(volume) {
-    const media = document.querySelector('video, audio');
-    if (media) {
-      media.volume = volume;
-      if (volume > 0 && media.muted) {
-        media.muted = false;
-      } else if (volume === 0 && !media.muted) {
-        media.muted = true;
-      }
-      sendVideoInfo(getVideoInfo(), 'popup-volume');
-      return true;
-    }
-    return false;
-  }
-
   function isUsable(element) {
     return Boolean(element && !element.disabled && element.getAttribute('aria-disabled') !== 'true');
   }
@@ -230,7 +213,6 @@
     if (media && media !== lastMedia) {
       lastMedia = media;
       media.addEventListener('ended', () => clickNextButton(), { passive: true });
-      media.addEventListener('volumechange', () => sendVideoInfo(getVideoInfo(), 'volume-change'), { passive: true });
       sendVideoInfo(getVideoInfo(), 'media-ready');
     }
     if (media?.ended) clickNextButton();
