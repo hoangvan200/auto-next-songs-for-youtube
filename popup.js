@@ -5,9 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoThumbnail = document.getElementById('videoThumbnail');
   const videoTitle = document.getElementById('videoTitle');
   const videoMeta = document.getElementById('videoMeta');
+  const themeToggle = document.getElementById('themeToggle');
+  const volumeSlider = document.getElementById('volumeSlider');
 
-  chrome.storage.sync.get({ autoContinueEnabled: true }, ({ autoContinueEnabled }) => {
+  chrome.storage.sync.get({ autoContinueEnabled: true, theme: 'dark' }, ({ autoContinueEnabled, theme }) => {
     toggle.checked = autoContinueEnabled;
+    themeToggle.checked = theme === 'light';
+    document.documentElement.classList.toggle('light', theme === 'light');
     renderState();
   });
 
@@ -24,15 +28,26 @@ document.addEventListener('DOMContentLoaded', () => {
     broadcast({ action: 'toggleAutoContinue', enabled });
   });
 
+  themeToggle.addEventListener('change', () => {
+    const isLight = themeToggle.checked;
+    const theme = isLight ? 'light' : 'dark';
+    document.documentElement.classList.toggle('light', isLight);
+    chrome.storage.sync.set({ theme });
+  });
+
   document.getElementById('prevBtn').addEventListener('click', () => sendControlCommand('prev'));
   document.getElementById('nextBtn').addEventListener('click', () => sendControlCommand('next'));
   document.getElementById('playPauseBtn').addEventListener('click', () => sendControlCommand('togglePlayPause'));
+
+  volumeSlider.addEventListener('input', () => {
+    sendControlCommand('setVolume', { volume: volumeSlider.value / 100 });
+  });
 
   requestVideoInfo();
 
   function renderState() {
     statusText.textContent = toggle.checked ? 'Enabled' : 'Disabled';
-    statusText.style.color = toggle.checked ? '#73a7ff' : '#979ba7';
+    statusText.style.color = toggle.checked ? 'var(--accent)' : 'var(--muted)';
   }
 
   function renderVideoInfo(info) {
@@ -40,6 +55,15 @@ document.addEventListener('DOMContentLoaded', () => {
     videoTitle.textContent = info.title || 'Auto next';
     videoTitle.title = info.title || '';
     videoMeta.textContent = info.channel || 'YouTube / YouTube Music';
+    
+    const playPauseIcon = document.getElementById('playPauseIcon');
+    if (playPauseIcon) {
+      playPauseIcon.textContent = info.isPlaying ? '⏸' : '▶';
+    }
+
+    if (info.volume !== undefined) {
+      volumeSlider.value = info.volume * 100;
+    }
 
     if (info.thumbnail) {
       videoThumbnail.onload = () => {
@@ -76,13 +100,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function sendControlCommand(command) {
+  function sendControlCommand(command, extra = {}) {
     chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
       if (tab?.id == null) return;
-      chrome.tabs.sendMessage(tab.id, { action: 'control', command }, (response) => {
+      chrome.tabs.sendMessage(tab.id, { action: 'control', command, ...extra }, (response) => {
         if (chrome.runtime.lastError || !response?.success) {
           statusText.textContent = 'Open a YouTube tab to control playback';
-          statusText.style.color = '#f0a6a6';
+          statusText.style.color = 'var(--accent)';
           return;
         }
         // YouTube navigation is asynchronous; the content script also pushes
