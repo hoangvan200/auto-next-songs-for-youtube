@@ -84,7 +84,7 @@
       if (!media || media.ended || media.paused || !isMediaReady(media)) {
         window.location.reload();
       }
-    }, 5000);
+    }, 10000);
   }
 
   function notifyVideoInfoWhenReady(previousKey, reason) {

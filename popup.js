@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoTitle = document.getElementById('videoTitle');
   const videoMeta = document.getElementById('videoMeta');
   const themeToggle = document.getElementById('themeToggle');
+  const downloadThumbnailBtn = document.getElementById('downloadThumbnailBtn');
+  let currentVideoId = '';
 
   chrome.storage.sync.get({ autoContinueEnabled: true, theme: 'dark' }, ({ autoContinueEnabled, theme }) => {
     toggle.checked = autoContinueEnabled;
@@ -38,6 +40,46 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('nextBtn').addEventListener('click', () => sendControlCommand('next'));
   document.getElementById('playPauseBtn').addEventListener('click', () => sendControlCommand('togglePlayPause'));
 
+  downloadThumbnailBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!currentVideoId) return;
+    
+    let url = `https://i.ytimg.com/vi/${currentVideoId}/maxresdefault.jpg`;
+    try {
+      let res = await fetch(url);
+      if (!res.ok) {
+        url = `https://i.ytimg.com/vi/${currentVideoId}/hqdefault.jpg`;
+        res = await fetch(url);
+      }
+      
+      const blob = await res.blob();
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(blob);
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob((pngBlob) => {
+           const pngUrl = URL.createObjectURL(pngBlob);
+           const a = document.createElement('a');
+           a.href = pngUrl;
+           a.download = `thumbnail_${currentVideoId}.png`;
+           a.click();
+           URL.revokeObjectURL(pngUrl);
+           URL.revokeObjectURL(objectUrl);
+        }, 'image/png');
+      };
+      img.src = objectUrl;
+    } catch (err) {
+      console.error('Failed to download thumbnail', err);
+    }
+  });
+
 
   requestVideoInfo();
 
@@ -51,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     videoTitle.textContent = info.title || 'Auto next';
     videoTitle.title = info.title || '';
     videoMeta.textContent = info.channel || 'YouTube / YouTube Music';
+    currentVideoId = info.videoId || '';
     
     const playPauseIcon = document.getElementById('playPauseIcon');
     if (playPauseIcon) {
