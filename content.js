@@ -10,14 +10,17 @@
   chrome.storage.sync.get({ autoContinueEnabled: true, audioOnlyEnabled: false }, (state) => {
     autoContinueEnabled = state.autoContinueEnabled;
     audioOnlyEnabled = state.audioOnlyEnabled;
+    window.localStorage.setItem('autoNextAudioOnlyEnabled', audioOnlyEnabled ? 'true' : 'false');
     updateAudioOnlyUI(audioOnlyEnabled);
   });
 
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'toggleAudioOnly') {
       audioOnlyEnabled = Boolean(request.enabled);
+      window.localStorage.setItem('autoNextAudioOnlyEnabled', audioOnlyEnabled ? 'true' : 'false');
       updateAudioOnlyUI(audioOnlyEnabled);
       sendResponse({ success: true });
+      window.location.reload();
       return;
     }
 

@@ -11,37 +11,13 @@ const ICONS = {
   }
 };
 
-const AUDIO_ONLY_RULE_ID = 1;
-
-function updateAudioOnlyRule(enabled) {
-  if (enabled) {
-    chrome.declarativeNetRequest.updateDynamicRules({
-      addRules: [{
-        id: AUDIO_ONLY_RULE_ID,
-        priority: 1,
-        action: { type: 'block' },
-        condition: {
-          regexFilter: "^https?://[^/]+\\.(googlevideo\\.com|c\\.youtube\\.com)/videoplayback.*[?&](mime=video|itag=(133|134|135|136|137|138|160|212|242|243|244|247|248|264|266|271|272|278|298|299|302|303|308|313|315|330|331|332|333|334|335|336|337|394|395|396|397|398|399))(&|$)",
-          resourceTypes: ["xmlhttprequest", "media"]
-        }
-      }],
-      removeRuleIds: [AUDIO_ONLY_RULE_ID]
-    });
-  } else {
-    chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: [AUDIO_ONLY_RULE_ID]
-    });
-  }
-}
-
 function setIconState(enabled) {
   chrome.action.setIcon({ path: enabled ? ICONS.enabled : ICONS.disabled });
 }
 
 function initializeState() {
-  chrome.storage.sync.get({ autoContinueEnabled: true, audioOnlyEnabled: false }, (state) => {
+  chrome.storage.sync.get({ autoContinueEnabled: true }, (state) => {
     setIconState(state.autoContinueEnabled);
-    updateAudioOnlyRule(state.audioOnlyEnabled);
   });
 }
 
@@ -53,7 +29,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     setIconState(Boolean(request.enabled));
     sendResponse({ success: true });
   } else if (request.action === 'setAudioOnlyState') {
-    updateAudioOnlyRule(Boolean(request.enabled));
+    // We don't need background logic for audio-only anymore, 
+    // it's handled by localStorage and inject.js
     sendResponse({ success: true });
   }
 });
