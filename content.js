@@ -115,48 +115,53 @@
   function sendVideoInfo(info = getVideoInfo(), reason = 'navigation') {
     if (!info) return;
     updateAudioOnlyUI(audioOnlyEnabled);
-    chrome.runtime.sendMessage({ action: 'videoInfoUpdated', info, reason }, () => void chrome.runtime.lastError);
+    try {
+      chrome.runtime.sendMessage({ action: 'videoInfoUpdated', info, reason }, () => {
+        const _ = chrome.runtime.lastError;
+      });
+    } catch (err) {
+      if (err.message.includes('Extension context invalidated')) {
+        if (metadataTimer) clearInterval(metadataTimer);
+      }
+    }
   }
 
+  function initAudioOnlyStyles() {
+    if (document.getElementById('auto-next-audio-only-style')) return;
+    const style = document.createElement('style');
+    style.id = 'auto-next-audio-only-style';
+    style.textContent = `
+      body.auto-next-audio-only video {
+        opacity: 0 !important;
+      }
+      body.auto-next-audio-only .html5-video-player {
+        background-color: #000 !important;
+        background-image: var(--auto-next-thumb, none) !important;
+        background-size: contain !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  initAudioOnlyStyles();
+
   function updateAudioOnlyUI(enabled) {
-    let overlay = document.getElementById('auto-next-audio-only-overlay');
-    if (!enabled) {
-      if (overlay) overlay.style.display = 'none';
-      const video = document.querySelector('video');
-      if (video) video.style.opacity = '1';
-      return;
-    }
-
-    const player = document.querySelector('.html5-video-player') || document.querySelector('ytmusic-player');
-    if (!player) return;
-
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'auto-next-audio-only-overlay';
-      overlay.style.position = 'absolute';
-      overlay.style.top = '0';
-      overlay.style.left = '0';
-      overlay.style.width = '100%';
-      overlay.style.height = '100%';
-      overlay.style.backgroundColor = '#000';
-      overlay.style.backgroundSize = 'contain';
-      overlay.style.backgroundPosition = 'center';
-      overlay.style.backgroundRepeat = 'no-repeat';
-      overlay.style.zIndex = '10';
-      overlay.style.pointerEvents = 'none';
-      player.appendChild(overlay);
-    }
-
-    const info = getVideoInfo();
-    if (info.videoId) {
-      const maxResUrl = `https://i.ytimg.com/vi/${info.videoId}/maxresdefault.jpg`;
-      const hqUrl = `https://i.ytimg.com/vi/${info.videoId}/hqdefault.jpg`;
-      overlay.style.backgroundImage = `url('${maxResUrl}'), url('${hqUrl}')`;
+    if (enabled) {
+      document.body.classList.add('auto-next-audio-only');
+      const info = getVideoInfo();
+      if (info.videoId) {
+        const maxResUrl = `https://i.ytimg.com/vi/${info.videoId}/maxresdefault.jpg`;
+        const hqUrl = `https://i.ytimg.com/vi/${info.videoId}/hqdefault.jpg`;
+        document.body.style.setProperty('--auto-next-thumb', `url('${maxResUrl}'), url('${hqUrl}')`);
+      }
+    } else {
+      document.body.classList.remove('auto-next-audio-only');
     }
     
-    overlay.style.display = 'block';
-    const video = document.querySelector('video');
-    if (video) video.style.opacity = '0';
+    // Cleanup old DOM overlay if it exists from previous version
+    const oldOverlay = document.getElementById('auto-next-audio-only-overlay');
+    if (oldOverlay) oldOverlay.remove();
   }
 
   function getVideoInfo() {

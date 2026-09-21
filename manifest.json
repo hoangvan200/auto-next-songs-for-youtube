@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Auto Next Songs for YouTube",
-  "version": "4.3.1",
+  "version": "4.3.2",
   "description": "Automatically continue to the next video or song on YouTube and YouTube Music.",
   "permissions": [
     "storage",
