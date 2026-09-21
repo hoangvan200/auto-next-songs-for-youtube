@@ -279,6 +279,9 @@
     return media.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && media.currentSrc;
   }
 
+  let lastInfoKey = '';
+  let lastThumbnailUrl = '';
+
   function checkPlaybackEnd() {
     const media = document.querySelector('video, audio');
     if (media && media !== lastMedia) {
@@ -286,6 +289,14 @@
       media.addEventListener('ended', () => clickNextButton(), { passive: true });
       sendVideoInfo(getVideoInfo(), 'media-ready');
     }
+
+    const info = getVideoInfo();
+    if (info.key !== lastInfoKey || info.thumbnail !== lastThumbnailUrl) {
+      lastInfoKey = info.key;
+      lastThumbnailUrl = info.thumbnail;
+      sendVideoInfo(info, 'metadata-changed');
+    }
+
     if (media?.ended) clickNextButton();
   }
 
