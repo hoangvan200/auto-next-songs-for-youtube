@@ -150,10 +150,14 @@
     if (enabled) {
       document.body.classList.add('auto-next-audio-only');
       const info = getVideoInfo();
-      if (info.videoId) {
-        const maxResUrl = `https://i.ytimg.com/vi/${info.videoId}/maxresdefault.jpg`;
-        const hqUrl = `https://i.ytimg.com/vi/${info.videoId}/hqdefault.jpg`;
-        document.body.style.setProperty('--auto-next-thumb', `url('${maxResUrl}'), url('${hqUrl}')`);
+      if (info.thumbnail) {
+        if (info.thumbnail.includes('googleusercontent.com')) {
+          document.body.style.setProperty('--auto-next-thumb', `url('${info.thumbnail}')`);
+        } else if (info.videoId) {
+          const maxResUrl = `https://i.ytimg.com/vi/${info.videoId}/maxresdefault.jpg`;
+          const hqUrl = `https://i.ytimg.com/vi/${info.videoId}/hqdefault.jpg`;
+          document.body.style.setProperty('--auto-next-thumb', `url('${maxResUrl}'), url('${hqUrl}')`);
+        }
       }
     } else {
       document.body.classList.remove('auto-next-audio-only');
@@ -178,7 +182,17 @@
       'ytd-video-owner-renderer a',
       'ytmusic-player-bar .byline'
     ]);
-    const thumbnail = videoId ? `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/mqdefault.jpg` : '';
+    let thumbnail = '';
+    const ytMusicImg = document.querySelector('#song-image img') || document.querySelector('ytmusic-player-bar img');
+    if (ytMusicImg && ytMusicImg.src && ytMusicImg.src.startsWith('http')) {
+      thumbnail = ytMusicImg.src;
+      if (thumbnail.includes('googleusercontent.com')) {
+        thumbnail = thumbnail.split('=')[0] + '=w1200-h1200';
+      }
+    }
+    if (!thumbnail && videoId) {
+      thumbnail = `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/hqdefault.jpg`;
+    }
 
     return {
       key: videoId || window.location.href,

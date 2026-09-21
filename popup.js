@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const downloadThumbnailBtn = document.getElementById('downloadThumbnailBtn');
   const audioOnlyToggle = document.getElementById('audioOnlyToggle');
   let currentVideoId = '';
+  let currentThumbnailUrl = '';
 
   chrome.storage.sync.get({ autoContinueEnabled: true, theme: 'dark', audioOnlyEnabled: false }, ({ autoContinueEnabled, theme, audioOnlyEnabled }) => {
     if (toggle) toggle.checked = autoContinueEnabled;
@@ -52,12 +53,17 @@ document.addEventListener('DOMContentLoaded', () => {
   downloadThumbnailBtn?.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!currentVideoId) return;
+    if (!currentThumbnailUrl && !currentVideoId) return;
     
-    let url = `https://i.ytimg.com/vi/${currentVideoId}/maxresdefault.jpg`;
+    let url = currentThumbnailUrl;
+    let isYtImg = url && url.includes('i.ytimg.com');
+    if (isYtImg && currentVideoId) {
+      url = `https://i.ytimg.com/vi/${currentVideoId}/maxresdefault.jpg`;
+    }
+    
     try {
       let res = await fetch(url);
-      if (!res.ok) {
+      if (!res.ok && isYtImg && currentVideoId) {
         url = `https://i.ytimg.com/vi/${currentVideoId}/hqdefault.jpg`;
         res = await fetch(url);
       }
@@ -104,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     videoTitle.title = info.title || '';
     videoMeta.textContent = info.channel || 'YouTube / YouTube Music';
     currentVideoId = info.videoId || '';
+    currentThumbnailUrl = info.thumbnail || '';
     
     const playPauseIcon = document.getElementById('playPauseIcon');
     if (playPauseIcon) {
