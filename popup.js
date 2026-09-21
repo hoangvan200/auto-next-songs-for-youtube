@@ -11,9 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentVideoId = '';
 
   chrome.storage.sync.get({ autoContinueEnabled: true, theme: 'dark', audioOnlyEnabled: false }, ({ autoContinueEnabled, theme, audioOnlyEnabled }) => {
-    toggle.checked = autoContinueEnabled;
-    audioOnlyToggle.checked = audioOnlyEnabled;
-    themeToggle.checked = theme === 'light';
+    if (toggle) toggle.checked = autoContinueEnabled;
+    if (audioOnlyToggle) audioOnlyToggle.checked = audioOnlyEnabled;
+    if (themeToggle) themeToggle.checked = theme === 'light';
     document.documentElement.classList.toggle('light', theme === 'light');
     renderState();
   });
@@ -24,32 +24,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  toggle.addEventListener('change', () => {
+  toggle?.addEventListener('change', () => {
     const enabled = toggle.checked;
     chrome.storage.sync.set({ autoContinueEnabled: enabled }, renderState);
     chrome.runtime.sendMessage({ action: 'setIconState', enabled });
     broadcast({ action: 'toggleAutoContinue', enabled });
   });
 
-  audioOnlyToggle.addEventListener('change', () => {
+  audioOnlyToggle?.addEventListener('change', () => {
     const enabled = audioOnlyToggle.checked;
     chrome.storage.sync.set({ audioOnlyEnabled: enabled });
     chrome.runtime.sendMessage({ action: 'setAudioOnlyState', enabled });
     broadcast({ action: 'toggleAudioOnly', enabled });
   });
 
-  themeToggle.addEventListener('change', () => {
+  themeToggle?.addEventListener('change', () => {
     const isLight = themeToggle.checked;
     const theme = isLight ? 'light' : 'dark';
     document.documentElement.classList.toggle('light', isLight);
     chrome.storage.sync.set({ theme });
   });
 
-  document.getElementById('prevBtn').addEventListener('click', () => sendControlCommand('prev'));
-  document.getElementById('nextBtn').addEventListener('click', () => sendControlCommand('next'));
-  document.getElementById('playPauseBtn').addEventListener('click', () => sendControlCommand('togglePlayPause'));
+  document.getElementById('prevBtn')?.addEventListener('click', () => sendControlCommand('prev'));
+  document.getElementById('nextBtn')?.addEventListener('click', () => sendControlCommand('next'));
+  document.getElementById('playPauseBtn')?.addEventListener('click', () => sendControlCommand('togglePlayPause'));
 
-  downloadThumbnailBtn.addEventListener('click', async (e) => {
+  downloadThumbnailBtn?.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (!currentVideoId) return;
@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
   requestVideoInfo();
 
   function renderState() {
+    if (!statusText || !toggle) return;
     statusText.textContent = toggle.checked ? 'Enabled' : 'Disabled';
     statusText.style.color = toggle.checked ? 'var(--accent)' : 'var(--muted)';
   }
