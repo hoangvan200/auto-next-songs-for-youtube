@@ -9,23 +9,23 @@ Automatically continue to the next video or song on YouTube and YouTube Music, w
 
 ## Features
 
-### 🎵 Playback
+### Playback
 - **Auto next** — automatically advances to the next video or song when the current one ends.
 - **Previous / Play-Pause / Next** popup controls for the active YouTube tab.
 - **10-second recovery fallback** — if no playing player is detected after an automatic transition, the extension reloads playback gracefully.
 
-### 🖼️ Popup & UI
+### Popup and UI
 - **Live video info** — current title, channel name, and thumbnail are synced to the popup after every navigation.
 - **Thumbnail download** — hover over the popup thumbnail and click the download button to save the highest-quality PNG available.
 - **Dark / Light theme** toggle.
 - No third-party CDN or remote code — fully self-contained.
 
-### 🔇 No Video (Audio Overlay)
+### No Video (Audio Overlay)
 - Hides the video stream behind a high-resolution thumbnail overlay, reducing GPU rendering load and screen glare while listening to music.
 - Works on both **youtube.com** and **music.youtube.com**.
 - Thumbnail overlay stays in sync even when switching songs rapidly on YouTube Music's SPA interface.
 
-### 📊 Data Transfer Monitor
+### Data Transfer Monitor
 - Displays **real-time download speed** (Kbps) and **cumulative data usage** (MB / GB) consumed by YouTube in the popup.
 - Cycle between **Today / This week / This month** with a single button tap — data is anchored so layout never shifts.
 - Uses **`PerformanceObserver.transferSize`** — the browser's own wire-byte measurement, the same source as the DevTools Network tab — for accurate figures.
@@ -37,9 +37,9 @@ Automatically continue to the next video or song on YouTube and YouTube Music, w
 
 | Browser | Support |
 |---------|---------|
-| Chrome / Chromium | ✅ Full support (Manifest V3) |
-| Edge (Chromium) | ✅ Full support |
-| Firefox | ❌ Not supported (uses WebExtension API differences) |
+| Chrome / Chromium | Full support (Manifest V3) |
+| Edge (Chromium) | Full support |
+| Firefox | Not supported (uses WebExtension API differences) |
 
 Tested against **youtube.com**, **music.youtube.com**, and **m.youtube.com**.
 
@@ -71,7 +71,7 @@ Then follow steps 4–6 above, selecting the cloned folder.
 4. **No video** toggle — hide the video and display the thumbnail overlay instead.
 5. **Data transfer** — see live download speed and total data used; click the period button to cycle between Today / This week / This month.
 6. **Theme** toggle — switch between dark and light mode.
-7. Use the **‹‹ / ▶ / ››** buttons to control playback in the active YouTube tab.
+7. Use the Previous / Play-Pause / Next buttons to control playback in the active YouTube tab.
 
 ---
 
