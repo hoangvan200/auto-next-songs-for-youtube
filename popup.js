@@ -96,6 +96,46 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
+  const dataTransferValue = document.getElementById('dataTransferValue');
+  const dataTransferPeriodBtn = document.getElementById('dataTransferPeriodBtn');
+  
+  let currentPeriod = 'today';
+  
+  function updateDataTransfer() {
+    if (!dataTransferValue || !dataTransferPeriodBtn) return;
+    
+    dataTransferPeriodBtn.textContent = currentPeriod === 'today' ? 'Today' : (currentPeriod === 'week' ? 'This week' : 'This month');
+    
+    chrome.storage.local.get(['dataUsage'], (res) => {
+      const usage = res.dataUsage || {};
+      let totalBytes = 0;
+      const now = new Date();
+      const daysToSum = currentPeriod === 'today' ? 1 : (currentPeriod === 'week' ? 7 : 30);
+      
+      for (let i = 0; i < daysToSum; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const dString = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+        if (usage[dString]) {
+          totalBytes += usage[dString];
+        }
+      }
+      
+      if (totalBytes > 1024 * 1024 * 1024) {
+        dataTransferValue.textContent = (totalBytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+      } else {
+        dataTransferValue.textContent = (totalBytes / (1024 * 1024)).toFixed(1) + ' MB';
+      }
+    });
+  }
+
+  dataTransferPeriodBtn?.addEventListener('click', () => {
+    currentPeriod = currentPeriod === 'today' ? 'week' : (currentPeriod === 'week' ? 'month' : 'today');
+    updateDataTransfer();
+  });
+  
+  updateDataTransfer();
+  setInterval(updateDataTransfer, 3000);
+
   requestVideoInfo();
 
   function renderState() {

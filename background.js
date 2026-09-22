@@ -34,3 +34,52 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ success: true });
   }
 });
+
+// Data tracking logic
+let bytesBuffer = 0;
+let saveTimeout = null;
+
+function flushData() {
+  if (bytesBuffer === 0) return;
+  const bytesToSave = bytesBuffer;
+  bytesBuffer = 0;
+  
+  const date = new Date();
+  const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+  
+  chrome.storage.local.get(['dataUsage'], (res) => {
+    const usage = res.dataUsage || {};
+    usage[localDate] = (usage[localDate] || 0) + bytesToSave;
+    
+    // Cleanup old data (keep 60 days)
+    const keys = Object.keys(usage).sort();
+    if (keys.length > 60) {
+      delete usage[keys[0]];
+    }
+    
+    chrome.storage.local.set({ dataUsage: usage });
+  });
+}
+
+chrome.webRequest.onCompleted.addListener(
+  (details) => {
+    let bytes = 800; // Approx request headers
+    const cl = details.responseHeaders?.find(h => h.name.toLowerCase() === 'content-length');
+    if (cl && cl.value) {
+      bytes += parseInt(cl.value, 10);
+    }
+    bytesBuffer += bytes;
+    
+    if (bytesBuffer > 512 * 1024) { // Flush every 512KB
+      if (saveTimeout) { clearTimeout(saveTimeout); saveTimeout = null; }
+      flushData();
+    } else if (!saveTimeout) {
+      saveTimeout = setTimeout(() => {
+        flushData();
+        saveTimeout = null;
+      }, 3000);
+    }
+  },
+  { urls: ["*://*.googlevideo.com/*", "*://*.youtube.com/*", "*://*.ytimg.com/*"] },
+  ["responseHeaders"]
+);

@@ -150,18 +150,32 @@
       </div>
     </section>
 
-    <section class="settings">
-      <div class="setting-label">
-        <div>
-          <strong>Auto next</strong>
-          <div id="statusText" class="status" role="status">Loading…</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <section class="settings">
+        <div class="setting-label">
+          <div>
+            <strong>Auto next</strong>
+            <div id="statusText" class="status" role="status">Loading…</div>
+          </div>
         </div>
-      </div>
-      <label class="switch" title="Toggle automatic next playback">
-        <input id="autoContinueToggle" type="checkbox" aria-label="Enable auto next">
-        <span class="track"></span>
-      </label>
-    </section>
+        <label class="switch" title="Toggle automatic next playback">
+          <input id="autoContinueToggle" type="checkbox" aria-label="Enable auto next">
+          <span class="track"></span>
+        </label>
+      </section>
+
+      <section class="settings">
+        <div class="setting-label">
+          <div>
+            <strong>Data transfer</strong>
+            <div class="status" style="display: flex; align-items: center; gap: 4px; margin-top: 4px;">
+              <span id="dataTransferValue" style="color: var(--accent); font-weight: 600;">0 MB</span>
+              <button id="dataTransferPeriodBtn" style="min-height: 18px; line-height: 1; padding: 0 6px; border-radius: 4px; font-size: 10px; height: 18px;">Today</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
       <section class="settings">
