@@ -97,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   const dataTransferValue = document.getElementById('dataTransferValue');
+  const dataTransferSpeed = document.getElementById('dataTransferSpeed');
   const dataTransferPeriodBtn = document.getElementById('dataTransferPeriodBtn');
   
   let currentPeriod = 'today';
@@ -106,9 +107,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     dataTransferPeriodBtn.textContent = currentPeriod === 'today' ? 'Today' : (currentPeriod === 'week' ? 'This week' : 'This month');
     
-    chrome.storage.local.get(['dataUsage'], (res) => {
-      const usage = res.dataUsage || {};
-      let totalBytes = 0;
+    chrome.runtime.sendMessage({ action: 'getNetworkStats' }, (res) => {
+      if (chrome.runtime.lastError || !res) return;
+      
+      if (dataTransferSpeed) {
+        dataTransferSpeed.textContent = `${res.speedKbps} Kbps`;
+      }
+      
+      const usage = res.usage || {};
+      let totalBytes = res.buffer || 0; // add background un-flushed buffer
+      
       const now = new Date();
       const daysToSum = currentPeriod === 'today' ? 1 : (currentPeriod === 'week' ? 7 : 30);
       
@@ -134,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   updateDataTransfer();
-  setInterval(updateDataTransfer, 3000);
+  let statsInterval = setInterval(updateDataTransfer, 1500);
 
   requestVideoInfo();
 
