@@ -13,6 +13,41 @@
     updateAudioOnlyUI(audioOnlyEnabled);
   });
 
+  // ---- Accurate Data Transfer Tracking via PerformanceObserver ----
+  // Uses transferSize (actual wire bytes including headers) whenever the server
+  // allows it via Timing-Allow-Origin. Falls back to 0 for restricted entries.
+  (function startTransferObserver() {
+    try {
+      const MEDIA_HOSTS = ['googlevideo.com', 'youtube.com', 'ytimg.com', 'googleusercontent.com'];
+      
+      function isTrackedUrl(url) {
+        try {
+          const host = new URL(url).hostname;
+          return MEDIA_HOSTS.some(h => host.endsWith(h));
+        } catch { return false; }
+      }
+
+      function reportBytes(bytes) {
+        if (!bytes || bytes <= 0) return;
+        chrome.runtime.sendMessage({ action: 'reportBytes', bytes }, () => void chrome.runtime.lastError);
+      }
+
+      const observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (!isTrackedUrl(entry.name)) continue;
+          // transferSize = 0 means cached or TAO blocked — skip
+          if (entry.transferSize > 0) {
+            reportBytes(entry.transferSize);
+          }
+        }
+      });
+
+      observer.observe({ type: 'resource', buffered: true });
+    } catch (e) {
+      // PerformanceObserver not available
+    }
+  })();
+
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'toggleAudioOnly') {
       audioOnlyEnabled = Boolean(request.enabled);

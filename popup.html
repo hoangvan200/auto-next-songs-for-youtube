@@ -164,16 +164,12 @@
         </label>
       </section>
 
-      <section class="settings">
-        <div class="setting-label" style="width: 100%;">
-          <div style="display: flex; justify-content: space-between; width: 100%; align-items: flex-start;">
-            <strong>Data transfer</strong>
-          </div>
-          <div class="status" style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 4px;">
-            <span id="dataTransferSpeed" style="color: var(--muted); font-size: 11px; width: 55px; text-align: right; font-variant-numeric: tabular-nums;">0 Kbps</span>
-            <span id="dataTransferValue" style="color: var(--accent); font-weight: 600; width: 55px; text-align: right; font-variant-numeric: tabular-nums;">0 MB</span>
-            <button id="dataTransferPeriodBtn" style="min-height: 18px; line-height: 1; padding: 0 6px; border-radius: 4px; font-size: 10px; height: 18px;">Today</button>
-          </div>
+      <section class="settings" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+        <strong>Data transfer</strong>
+        <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+          <span id="dataTransferSpeed" style="color: var(--muted); font-size: 11px; min-width: 60px; font-variant-numeric: tabular-nums; white-space: nowrap;">0 Kbps</span>
+          <span id="dataTransferValue" style="color: var(--accent); font-weight: 600; min-width: 48px; font-variant-numeric: tabular-nums; white-space: nowrap;">0 MB</span>
+          <button id="dataTransferPeriodBtn" style="min-height: 18px; line-height: 1; padding: 0 6px; border-radius: 4px; font-size: 10px; height: 18px; white-space: nowrap;">Today</button>
         </div>
       </section>
     </div>
