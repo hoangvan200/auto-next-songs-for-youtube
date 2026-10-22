@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Auto Next Songs for YouTube",
-  "version": "4.5.2",
+  "version": "4.6.0",
   "description": "Automatically continue to the next video or song on YouTube and YouTube Music.",
   "permissions": [
     "storage",
@@ -34,7 +34,22 @@
         "https://music.youtube.com/*",
         "https://youtube.com/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "page-bridge.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*",
+        "https://music.youtube.com/*",
+        "https://youtube.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],

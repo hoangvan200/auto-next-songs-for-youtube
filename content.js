@@ -203,44 +203,119 @@
     if (oldOverlay) oldOverlay.remove();
   }
 
+  let lastValidInfo = null;
+
+  function getMainMedia() {
+    return document.querySelector('#movie_player video, .html5-main-video') || document.querySelector('video, audio');
+  }
+
   function getVideoInfo() {
-    const media = document.querySelector('video, audio');
-    const videoId = new URLSearchParams(window.location.search).get('v') || getMusicVideoId();
-    const title = firstText([
-      'h1.ytd-watch-metadata',
-      'h1.title',
-      'ytmusic-player-bar .title',
-      'ytmusic-player-bar .title a'
-    ]) || document.title.replace(/\s*-\s*YouTube(?: Music)?\s*$/i, '').trim();
-    const channel = firstText([
-      '#owner #channel-name a',
-      'ytd-video-owner-renderer a',
-      'ytmusic-player-bar .byline'
-    ]);
+    const media = getMainMedia();
+    const isPlaying = Boolean(media && !media.paused && !media.ended);
+    const hasPlayer = Boolean(media);
+
+    // 1. Direct from main-world bridge (movie_player.getVideoData()) - 100% accurate
+    const bridgeId = document.documentElement.dataset.ytActiveVideoId;
+    const bridgeTitle = document.documentElement.dataset.ytActiveTitle;
+    const bridgeAuthor = document.documentElement.dataset.ytActiveAuthor;
+
+    let videoId = bridgeId || '';
+    let title = bridgeTitle || '';
+    let channel = bridgeAuthor || '';
+
+    // 2. URL param if on /watch page
+    if (!videoId && window.location.pathname.startsWith('/watch')) {
+      videoId = new URLSearchParams(window.location.search).get('v') || '';
+    }
+
+    // 3. YouTube Music player bar
+    if (!videoId) {
+      videoId = getMusicVideoId();
+    }
+
+    // 4. Miniplayer specific title link (avoid matching playlist / recommendation queue links)
+    if (!videoId) {
+      const miniLink = document.querySelector(
+        'ytd-miniplayer h1.title a[href*="watch?v="], ' +
+        'ytd-miniplayer .metadata a[href*="watch?v="], ' +
+        'ytd-miniplayer #info-bar a[href*="watch?v="]'
+      );
+      if (miniLink?.href) {
+        const match = miniLink.href.match(/[?&]v=([^&]+)/);
+        if (match) videoId = match[1];
+      }
+    }
+
+    // 5. Retain video info if currently playing in miniplayer or PIP
+    if ((!videoId || !title) && hasPlayer && isPlaying && lastValidInfo) {
+      if (!videoId) videoId = lastValidInfo.videoId;
+      if (!title) title = lastValidInfo.title;
+      if (!channel) channel = lastValidInfo.channel;
+    }
+
+    // 6. Title fallbacks
+    if (!title) {
+      title = firstText([
+        'h1.ytd-watch-metadata',
+        'h1.title',
+        'ytd-miniplayer yt-formatted-string.miniplayer-title',
+        'ytd-miniplayer h1.title',
+        'ytmusic-player-bar .title',
+        'ytmusic-player-bar .title a'
+      ]) || (navigator.mediaSession?.metadata?.title)
+         || (document.title.replace(/\s*-\s*YouTube(?: Music)?\s*$/i, '').trim() || 'YouTube');
+    }
+
+    // 7. Channel fallbacks
+    if (!channel) {
+      channel = firstText([
+        '#owner #channel-name a',
+        'ytd-video-owner-renderer a',
+        'ytd-miniplayer #channel-name',
+        'ytd-miniplayer .channel',
+        'ytd-miniplayer #byline',
+        'ytmusic-player-bar .byline'
+      ]) || (navigator.mediaSession?.metadata?.artist) || 'YouTube';
+    }
+
+    // 8. Thumbnail
     let thumbnail = '';
     const ytMusicImg = document.querySelector('#song-image img') || document.querySelector('ytmusic-player-bar img');
     if (ytMusicImg && ytMusicImg.src && ytMusicImg.src.startsWith('http')) {
       thumbnail = ytMusicImg.src;
       if (thumbnail.includes('googleusercontent.com')) {
-        thumbnail = thumbnail.split('=')[0] + '=w1200-h1200';
+        thumbnail = thumbnail.split('=')[0] + '=w320-h320';
       }
     }
     if (!thumbnail && videoId) {
-      thumbnail = `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/hqdefault.jpg`;
+      thumbnail = `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/mqdefault.jpg`;
+    }
+    if (!thumbnail && navigator.mediaSession?.metadata?.artwork?.length) {
+      const art = navigator.mediaSession.metadata.artwork;
+      thumbnail = art[art.length - 1].src;
+    }
+    if (!thumbnail && lastValidInfo?.thumbnail && isPlaying) {
+      thumbnail = lastValidInfo.thumbnail;
     }
 
-    return {
+    const currentInfo = {
       key: videoId || window.location.href,
-      url: window.location.href,
+      url: videoId ? `https://www.youtube.com/watch?v=${videoId}` : window.location.href,
       videoId: videoId || '',
       title: title || 'YouTube',
       channel: channel || 'YouTube',
       thumbnail,
-      isPlaying: Boolean(media && !media.paused && !media.ended),
-      hasPlayer: Boolean(media),
+      isPlaying,
+      hasPlayer,
       duration: media?.duration && Number.isFinite(media.duration) ? media.duration : 0,
       currentTime: media?.currentTime && Number.isFinite(media.currentTime) ? media.currentTime : 0
     };
+
+    if (videoId && title && title !== 'YouTube') {
+      lastValidInfo = { videoId, title, channel, thumbnail };
+    }
+
+    return currentInfo;
   }
 
   function getMusicVideoId() {
@@ -283,7 +358,7 @@
   }
 
   function togglePlayPause() {
-    const media = document.querySelector('video, audio');
+    const media = getMainMedia();
     if (media) {
       if (media.paused) {
         const playResult = media.play();
@@ -318,7 +393,7 @@
   let lastThumbnailUrl = '';
 
   function checkPlaybackEnd() {
-    const media = document.querySelector('video, audio');
+    const media = getMainMedia();
     if (media && media !== lastMedia) {
       lastMedia = media;
       media.addEventListener('ended', () => clickNextButton(), { passive: true });

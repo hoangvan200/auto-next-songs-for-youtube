@@ -59,6 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isYtImg = url && url.includes('i.ytimg.com');
     if (isYtImg && currentVideoId) {
       url = `https://i.ytimg.com/vi/${currentVideoId}/maxresdefault.jpg`;
+    } else if (url && url.includes('googleusercontent.com')) {
+      url = url.split('=')[0] + '=w1200-h1200';
     }
     
     try {

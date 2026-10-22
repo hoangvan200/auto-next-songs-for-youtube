@@ -90,6 +90,7 @@ Then follow steps 4–6 above, selecting the cloned folder.
 
 | Version | Highlights |
 |---------|-----------|
+| **4.6.0** | Accurate Miniplayer tracking via Main-World bridge; optimized 16:9 (320x180) thumbnail; theme-adaptive SVG placeholder |
 | **4.5.2** | Accurate data tracking via `PerformanceObserver.transferSize`; fixed UI layout for Data transfer row |
 | **4.5.1** | Added real-time download speed (Kbps); fixed cached-request inflation |
 | **4.5.0** | Introduced Data Transfer monitor (Today / Week / Month) |
