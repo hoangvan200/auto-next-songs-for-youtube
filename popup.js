@@ -162,9 +162,9 @@ document.addEventListener('DOMContentLoaded', () => {
     currentVideoId = info.videoId || '';
     currentThumbnailUrl = info.thumbnail || '';
     
-    const playPauseIcon = document.getElementById('playPauseIcon');
-    if (playPauseIcon) {
-      playPauseIcon.textContent = info.isPlaying ? '⏸' : '▶';
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    if (playPauseBtn) {
+      playPauseBtn.classList.toggle('is-playing', Boolean(info.isPlaying));
     }
 
     if (info.thumbnail) {

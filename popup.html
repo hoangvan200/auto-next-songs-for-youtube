@@ -1,216 +1,232 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Auto next</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg: #0d1117;
-      --panel: #161b22;
-      --panel-raised: #21262d;
-      --text: #c9d1d9;
-      --muted: #8b949e;
-      --accent: #f85149;
-      --accent-soft: rgba(248, 81, 73, .15);
-      --stroke: #30363d;
-    }
-
-    :root.light {
-      color-scheme: light;
-      --bg: #ffffff;
-      --panel: #f6f8fa;
-      --panel-raised: #ffffff;
-      --text: #24292f;
-      --muted: #57606a;
-      --accent: #cf222e;
-      --accent-soft: rgba(207, 34, 46, .15);
-      --stroke: #d0d7de;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      width: 468px;
-      min-height: 286px;
-      margin: 0;
-      padding: 18px;
-      overflow: hidden;
-      background: var(--bg);
-      color: var(--text);
-      font: 14px/1.35 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    .shell { display: grid; gap: 20px; }
-
-    .preview {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .thumbnail {
-      width: 145px;
-      aspect-ratio: 16 / 9;
-      flex: 0 0 auto;
-      position: relative;
-      overflow: hidden;
-      border-radius: 8px;
-      background: var(--panel-raised);
-      border: 1px solid var(--stroke);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-    }
-
-    .download-btn {
-      position: absolute;
-      bottom: 6px;
-      right: 6px;
-      background: rgba(0,0,0,0.7);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      width: 28px;
-      height: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.2s;
-      z-index: 2;
-    }
-    .thumbnail.has-image:hover .download-btn { opacity: 1; }
-    .download-btn:hover { background: rgba(0,0,0,0.9); }
-
-    .placeholder-icon {
-      width: 38px;
-      height: 38px;
-      color: var(--muted);
-      opacity: 0.55;
-      transition: color .2s ease, opacity .2s ease;
-    }
-
-    .thumbnail img {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: none;
-    }
-
-    .thumbnail.has-image .placeholder-icon {
-      display: none;
-    }
-
-    .preview-copy strong { display: block; color: var(--text); font-size: 15px; font-weight: 650; }
-    .preview-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
-
-    .settings { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-    .setting-label { display: flex; align-items: center; gap: 10px; min-width: 0; }
-    .setting-label strong { color: var(--accent); font-size: 18px; font-weight: 500; letter-spacing: -.02em; }
-    .status { margin-top: 2px; color: var(--muted); font-size: 11px; }
-
-    .switch { position: relative; width: 54px; height: 30px; flex: 0 0 auto; }
-    .switch input { position: absolute; opacity: 0; pointer-events: none; }
-    .track { display: block; width: 54px; height: 30px; padding: 3px; cursor: pointer; border: 1px solid var(--stroke); border-radius: 999px; background: #2a2d33; transition: .2s ease; }
-    .track::after { content: ""; display: block; width: 22px; height: 22px; border-radius: 50%; background: #aeb1b8; transition: .2s ease; }
-    input:checked + .track { border-color: var(--accent); background: var(--accent-soft); }
-    input:checked + .track::after { transform: translateX(24px); background: var(--accent); box-shadow: 0 0 12px var(--accent-soft); }
-    input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 3px; }
-
-    .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-    button { min-height: 36px; border: 1px solid var(--stroke); border-radius: 9px; background: var(--panel); color: var(--muted); cursor: pointer; font: inherit; transition: .15s ease; }
-    button:hover { border-color: var(--accent); color: var(--text); background: var(--panel-raised); }
-    button:active { transform: translateY(1px); }
-    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .icon { font-size: 18px; line-height: 1; }
-  </style>
-</head>
-<body>
-  <main class="shell">
-    <section class="preview" aria-label="Extension preview">
-      <div id="thumbnail" class="thumbnail" aria-hidden="true">
-        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
-          <path d="M21.6799 16.9599L18.5499 9.64988C17.4899 7.16988 15.5399 7.06988 14.2299 9.42988L12.3399 12.8399C11.3799 14.5699 9.58993 14.7199 8.34993 13.1699L8.12993 12.8899C6.83993 11.2699 5.01993 11.4699 4.08993 13.3199L2.36993 16.7699C1.15993 19.1699 2.90993 21.9999 5.58993 21.9999H18.3499C20.9499 21.9999 22.6999 19.3499 21.6799 16.9599Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M6.96997 8C8.62682 8 9.96997 6.65685 9.96997 5C9.96997 3.34315 8.62682 2 6.96997 2C5.31312 2 3.96997 3.34315 3.96997 5C3.96997 6.65685 5.31312 8 6.96997 8Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <img id="videoThumbnail" alt="">
-        <button id="downloadThumbnailBtn" class="download-btn" aria-label="Download thumbnail" title="Download thumbnail">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </button>
-      </div>
-      <div class="preview-copy">
-        <strong id="videoTitle">Auto next</strong>
-        <span id="videoMeta">YouTube / YouTube Music</span>
-      </div>
-    </section>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-      <section class="settings">
-        <div class="setting-label">
-          <div>
-            <strong>Auto next</strong>
-            <div id="statusText" class="status" role="status">Loading…</div>
-          </div>
-        </div>
-        <label class="switch" title="Toggle automatic next playback">
-          <input id="autoContinueToggle" type="checkbox" aria-label="Enable auto next">
-          <span class="track"></span>
-        </label>
-      </section>
-
-      <section class="settings" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-        <strong>Data transfer</strong>
-        <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-          <span id="dataTransferSpeed" style="color: var(--muted); font-size: 11px; min-width: 60px; font-variant-numeric: tabular-nums; white-space: nowrap;">0 Kbps</span>
-          <span id="dataTransferValue" style="color: var(--accent); font-weight: 600; min-width: 48px; font-variant-numeric: tabular-nums; white-space: nowrap;">0 MB</span>
-          <button id="dataTransferPeriodBtn" style="min-height: 18px; line-height: 1; padding: 0 6px; border-radius: 4px; font-size: 10px; height: 18px; white-space: nowrap;">Today</button>
-        </div>
-      </section>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-      <section class="settings">
-        <div class="setting-label">
-          <div>
-            <strong>No video</strong>
-            <div class="status">Play audio only</div>
-          </div>
-        </div>
-        <label class="switch" title="Toggle audio only mode">
-          <input id="audioOnlyToggle" type="checkbox" aria-label="Enable audio only">
-          <span class="track"></span>
-        </label>
-      </section>
-
-      <section class="settings">
-        <div class="setting-label">
-          <div>
-            <strong>Theme</strong>
-            <div class="status">Light / dark</div>
-          </div>
-        </div>
-        <label class="switch" title="Toggle theme">
-          <input id="themeToggle" type="checkbox" aria-label="Enable light theme">
-          <span class="track"></span>
-        </label>
-      </section>
-    </div>
-
-
-    <nav class="controls" aria-label="Playback controls">
-      <button id="prevBtn" type="button" title="Previous song"><span class="icon" aria-hidden="true">‹‹</span><span class="sr-only">Previous</span></button>
-      <button id="playPauseBtn" type="button" title="Play or pause"><span id="playPauseIcon" class="icon" aria-hidden="true">▶</span><span class="sr-only">Play or pause</span></button>
-      <button id="nextBtn" type="button" title="Next song"><span class="icon" aria-hidden="true">››</span><span class="sr-only">Next</span></button>
-    </nav>
-  </main>
-  <script src="popup.js"></script>
-</body>
-</html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auto next</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-raised: #21262d;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --accent: #f85149;
+      --accent-soft: rgba(248, 81, 73, .15);
+      --stroke: #30363d;
+    }
+
+    :root.light {
+      color-scheme: light;
+      --bg: #ffffff;
+      --panel: #f6f8fa;
+      --panel-raised: #ffffff;
+      --text: #24292f;
+      --muted: #57606a;
+      --accent: #cf222e;
+      --accent-soft: rgba(207, 34, 46, .15);
+      --stroke: #d0d7de;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      width: 468px;
+      min-height: 286px;
+      margin: 0;
+      padding: 18px;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.35 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .shell { display: grid; gap: 20px; }
+
+    .preview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .thumbnail {
+      width: 145px;
+      aspect-ratio: 16 / 9;
+      flex: 0 0 auto;
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      background: var(--panel-raised);
+      border: 1px solid var(--stroke);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+    }
+
+    .download-btn {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 2;
+    }
+    .thumbnail.has-image:hover .download-btn { opacity: 1; }
+    .download-btn:hover { background: rgba(0,0,0,0.9); }
+
+    .placeholder-icon {
+      width: 38px;
+      height: 38px;
+      color: var(--muted);
+      opacity: 0.55;
+      transition: color .2s ease, opacity .2s ease;
+    }
+
+    .thumbnail img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .thumbnail.has-image .placeholder-icon {
+      display: none;
+    }
+
+    .preview-copy strong { display: block; color: var(--text); font-size: 15px; font-weight: 650; }
+    .preview-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+
+    .settings { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .setting-label { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .setting-label strong { color: var(--accent); font-size: 18px; font-weight: 500; letter-spacing: -.02em; }
+    .status { margin-top: 2px; color: var(--muted); font-size: 11px; }
+
+    .switch { position: relative; width: 54px; height: 30px; flex: 0 0 auto; }
+    .switch input { position: absolute; opacity: 0; pointer-events: none; }
+    .track { display: block; width: 54px; height: 30px; padding: 3px; cursor: pointer; border: 1px solid var(--stroke); border-radius: 999px; background: #2a2d33; transition: .2s ease; }
+    .track::after { content: ""; display: block; width: 22px; height: 22px; border-radius: 50%; background: #aeb1b8; transition: .2s ease; }
+    input:checked + .track { border-color: var(--accent); background: var(--accent-soft); }
+    input:checked + .track::after { transform: translateX(24px); background: var(--accent); box-shadow: 0 0 12px var(--accent-soft); }
+    input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .controls button { display: flex; align-items: center; justify-content: center; }
+    .controls button svg { width: 16px; height: 16px; fill: currentColor; display: block; }
+    #playPauseBtn .pause-icon { display: none; }
+    #playPauseBtn.is-playing .pause-icon { display: block; }
+    #playPauseBtn.is-playing .play-icon { display: none; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    button { min-height: 36px; border: 1px solid var(--stroke); border-radius: 9px; background: var(--panel); color: var(--muted); cursor: pointer; font: inherit; transition: .15s ease; }
+    button:hover { border-color: var(--accent); color: var(--text); background: var(--panel-raised); }
+    button:active { transform: translateY(1px); }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="preview" aria-label="Extension preview">
+      <div id="thumbnail" class="thumbnail" aria-hidden="true">
+        <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21.6799 16.9599L18.5499 9.64988C17.4899 7.16988 15.5399 7.06988 14.2299 9.42988L12.3399 12.8399C11.3799 14.5699 9.58993 14.7199 8.34993 13.1699L8.12993 12.8899C6.83993 11.2699 5.01993 11.4699 4.08993 13.3199L2.36993 16.7699C1.15993 19.1699 2.90993 21.9999 5.58993 21.9999H18.3499C20.9499 21.9999 22.6999 19.3499 21.6799 16.9599Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6.96997 8C8.62682 8 9.96997 6.65685 9.96997 5C9.96997 3.34315 8.62682 2 6.96997 2C5.31312 2 3.96997 3.34315 3.96997 5C3.96997 6.65685 5.31312 8 6.96997 8Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <img id="videoThumbnail" alt="">
+        <button id="downloadThumbnailBtn" class="download-btn" aria-label="Download thumbnail" title="Download thumbnail">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+      </div>
+      <div class="preview-copy">
+        <strong id="videoTitle">Auto next</strong>
+        <span id="videoMeta">YouTube / YouTube Music</span>
+      </div>
+    </section>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <section class="settings">
+        <div class="setting-label">
+          <div>
+            <strong>Auto next</strong>
+            <div id="statusText" class="status" role="status">Loading…</div>
+          </div>
+        </div>
+        <label class="switch" title="Toggle automatic next playback">
+          <input id="autoContinueToggle" type="checkbox" aria-label="Enable auto next">
+          <span class="track"></span>
+        </label>
+      </section>
+
+      <section class="settings" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+        <strong>Data transfer</strong>
+        <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+          <span id="dataTransferSpeed" style="color: var(--muted); font-size: 11px; min-width: 60px; font-variant-numeric: tabular-nums; white-space: nowrap;">0 Kbps</span>
+          <span id="dataTransferValue" style="color: var(--accent); font-weight: 600; min-width: 48px; font-variant-numeric: tabular-nums; white-space: nowrap;">0 MB</span>
+          <button id="dataTransferPeriodBtn" style="min-height: 18px; line-height: 1; padding: 0 6px; border-radius: 4px; font-size: 10px; height: 18px; white-space: nowrap;">Today</button>
+        </div>
+      </section>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <section class="settings">
+        <div class="setting-label">
+          <div>
+            <strong>No video</strong>
+            <div class="status">Play audio only</div>
+          </div>
+        </div>
+        <label class="switch" title="Toggle audio only mode">
+          <input id="audioOnlyToggle" type="checkbox" aria-label="Enable audio only">
+          <span class="track"></span>
+        </label>
+      </section>
+
+      <section class="settings">
+        <div class="setting-label">
+          <div>
+            <strong>Theme</strong>
+            <div class="status">Light / dark</div>
+          </div>
+        </div>
+        <label class="switch" title="Toggle theme">
+          <input id="themeToggle" type="checkbox" aria-label="Enable light theme">
+          <span class="track"></span>
+        </label>
+      </section>
+    </div>
+
+
+    <nav class="controls" aria-label="Playback controls">
+      <button id="prevBtn" type="button" title="Previous song">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/></svg>
+        <span class="sr-only">Previous</span>
+      </button>
+      <button id="playPauseBtn" type="button" title="Play or pause">
+        <span id="playPauseIcon">
+          <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+          <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="4.5" height="16" rx="1"/><rect x="14.5" y="4" width="4.5" height="16" rx="1"/></svg>
+        </span>
+        <span class="sr-only">Play or pause</span>
+      </button>
+      <button id="nextBtn" type="button" title="Next song">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/></svg>
+        <span class="sr-only">Next</span>
+      </button>
+    </nav>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
