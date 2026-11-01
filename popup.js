@@ -11,7 +11,16 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentVideoId = '';
   let currentThumbnailUrl = '';
 
-  chrome.storage.sync.get({ autoContinueEnabled: true, theme: 'dark', audioOnlyEnabled: false }, ({ autoContinueEnabled, theme, audioOnlyEnabled }) => {
+  chrome.storage.sync.get(['autoContinueEnabled', 'theme', 'audioOnlyEnabled'], (stored) => {
+    const autoContinueEnabled = stored.autoContinueEnabled ?? true;
+    const audioOnlyEnabled = stored.audioOnlyEnabled ?? false;
+
+    let theme = stored.theme;
+    if (!theme) {
+      const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+      theme = prefersLight ? 'light' : 'dark';
+      chrome.storage.sync.set({ theme });
+    }
     if (toggle) toggle.checked = autoContinueEnabled;
     if (audioOnlyToggle) audioOnlyToggle.checked = audioOnlyEnabled;
     if (themeToggle) themeToggle.checked = theme === 'light';

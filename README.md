@@ -90,6 +90,7 @@ Then follow steps 4–6 above, selecting the cloned folder.
 
 | Version | Highlights |
 |---------|-----------|
+| **4.6.2** | Integrated unified SVG media icon set with Apple-style soft corner radii; auto-detect system theme on install; updated Theme toggle label |
 | **4.6.1** | Replace Unicode media controls with vector SVG icons to fix Windows 10 emoji blue background |
 | **4.6.0** | Accurate Miniplayer tracking via Main-World bridge; optimized 16:9 (320x180) thumbnail; theme-adaptive SVG placeholder |
 | **4.5.2** | Accurate data tracking via `PerformanceObserver.transferSize`; fixed UI layout for Data transfer row |
