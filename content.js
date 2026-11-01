@@ -6,12 +6,42 @@
   let lastVideoKey = '';
   let recoveryTimer = null;
   let metadataTimer = null;
+  let playbackInterval = null;
+  let transferObserver = null;
+  let isContextInvalidated = false;
 
-  chrome.storage.sync.get({ autoContinueEnabled: true, audioOnlyEnabled: false }, (state) => {
-    autoContinueEnabled = state.autoContinueEnabled;
-    audioOnlyEnabled = state.audioOnlyEnabled;
-    updateAudioOnlyUI(audioOnlyEnabled);
-  });
+  function handleContextInvalidated() {
+    if (isContextInvalidated) return;
+    isContextInvalidated = true;
+    if (transferObserver) {
+      try { transferObserver.disconnect(); } catch (e) {}
+      transferObserver = null;
+    }
+    if (metadataTimer) {
+      clearInterval(metadataTimer);
+      metadataTimer = null;
+    }
+    if (playbackInterval) {
+      clearInterval(playbackInterval);
+      playbackInterval = null;
+    }
+    if (recoveryTimer) {
+      clearTimeout(recoveryTimer);
+      recoveryTimer = null;
+    }
+  }
+
+  try {
+    chrome.storage.sync.get({ autoContinueEnabled: true, audioOnlyEnabled: false }, (state) => {
+      if (chrome.runtime.lastError || !state) return;
+      autoContinueEnabled = state.autoContinueEnabled;
+      audioOnlyEnabled = state.audioOnlyEnabled;
+      updateAudioOnlyUI(audioOnlyEnabled);
+    });
+  } catch (e) {
+    // If context is already invalidated upon execution
+    handleContextInvalidated();
+  }
 
   // ---- Accurate Data Transfer Tracking via PerformanceObserver ----
   // Uses transferSize (actual wire bytes including headers) whenever the server
@@ -29,10 +59,26 @@
 
       function reportBytes(bytes) {
         if (!bytes || bytes <= 0) return;
-        chrome.runtime.sendMessage({ action: 'reportBytes', bytes }, () => void chrome.runtime.lastError);
+        if (!chrome.runtime?.id || isContextInvalidated) {
+          handleContextInvalidated();
+          return;
+        }
+        try {
+          chrome.runtime.sendMessage({ action: 'reportBytes', bytes }, () => {
+            const _ = chrome.runtime.lastError;
+          });
+        } catch (err) {
+          if (err?.message?.includes('Extension context invalidated') || !chrome.runtime?.id) {
+            handleContextInvalidated();
+          }
+        }
       }
 
-      const observer = new PerformanceObserver((list) => {
+      transferObserver = new PerformanceObserver((list) => {
+        if (isContextInvalidated || !chrome.runtime?.id) {
+          handleContextInvalidated();
+          return;
+        }
         for (const entry of list.getEntries()) {
           if (!isTrackedUrl(entry.name)) continue;
           // transferSize = 0 means cached or TAO blocked — skip
@@ -42,43 +88,50 @@
         }
       });
 
-      observer.observe({ type: 'resource', buffered: true });
+      transferObserver.observe({ type: 'resource', buffered: true });
     } catch (e) {
       // PerformanceObserver not available
     }
   })();
 
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'toggleAudioOnly') {
-      audioOnlyEnabled = Boolean(request.enabled);
-      updateAudioOnlyUI(audioOnlyEnabled);
-      sendResponse({ success: true });
-      return;
-    }
+  try {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (isContextInvalidated) return;
 
-    if (request.action === 'toggleAutoContinue') {
-      autoContinueEnabled = Boolean(request.enabled);
-      sendResponse({ success: true });
-      return;
-    }
+      if (request.action === 'toggleAudioOnly') {
+        audioOnlyEnabled = Boolean(request.enabled);
+        updateAudioOnlyUI(audioOnlyEnabled);
+        sendResponse({ success: true });
+        return;
+      }
 
-    if (request.action === 'getVideoInfo') {
-      sendResponse({ success: true, info: getVideoInfo() });
-      return;
-    }
+      if (request.action === 'toggleAutoContinue') {
+        autoContinueEnabled = Boolean(request.enabled);
+        sendResponse({ success: true });
+        return;
+      }
 
-    if (request.action === 'control') {
-      const handlers = {
-        next: () => clickNextButton({ force: true, source: 'popup' }),
-        prev: clickPreviousButton,
-        togglePlayPause
-      };
-      const handler = handlers[request.command];
-      sendResponse({ success: Boolean(handler && handler()) });
-    }
-  });
+      if (request.action === 'getVideoInfo') {
+        sendResponse({ success: true, info: getVideoInfo() });
+        return;
+      }
+
+      if (request.action === 'control') {
+        const handlers = {
+          next: () => clickNextButton({ force: true, source: 'popup' }),
+          prev: clickPreviousButton,
+          togglePlayPause
+        };
+        const handler = handlers[request.command];
+        sendResponse({ success: Boolean(handler && handler()) });
+      }
+    });
+  } catch (e) {
+    handleContextInvalidated();
+  }
 
   function clickNextButton({ force = false, source = 'auto' } = {}) {
+    if (isContextInvalidated) return false;
     if (!force && !autoContinueEnabled) return false;
     const now = Date.now();
     if (!force && now - lastAdvanceAt < 2500) return false;
@@ -125,6 +178,7 @@
     if (recoveryTimer) clearTimeout(recoveryTimer);
     recoveryTimer = setTimeout(() => {
       recoveryTimer = null;
+      if (isContextInvalidated || !chrome.runtime?.id) return;
       const media = document.querySelector('video, audio');
       if (!media || media.ended || media.paused || !isMediaReady(media)) {
         window.location.reload();
@@ -133,9 +187,17 @@
   }
 
   function notifyVideoInfoWhenReady(previousKey, reason) {
+    if (isContextInvalidated || !chrome.runtime?.id) {
+      handleContextInvalidated();
+      return;
+    }
     if (metadataTimer) clearInterval(metadataTimer);
     let attempts = 0;
     metadataTimer = setInterval(() => {
+      if (isContextInvalidated || !chrome.runtime?.id) {
+        handleContextInvalidated();
+        return;
+      }
       attempts += 1;
       const info = getVideoInfo();
       const changed = info.key && info.key !== previousKey;
@@ -148,15 +210,19 @@
   }
 
   function sendVideoInfo(info = getVideoInfo(), reason = 'navigation') {
-    if (!info) return;
+    if (!info || isContextInvalidated) return;
+    if (!chrome.runtime?.id) {
+      handleContextInvalidated();
+      return;
+    }
     updateAudioOnlyUI(audioOnlyEnabled);
     try {
       chrome.runtime.sendMessage({ action: 'videoInfoUpdated', info, reason }, () => {
         const _ = chrome.runtime.lastError;
       });
     } catch (err) {
-      if (err.message.includes('Extension context invalidated')) {
-        if (metadataTimer) clearInterval(metadataTimer);
+      if (err?.message?.includes('Extension context invalidated') || !chrome.runtime?.id) {
+        handleContextInvalidated();
       }
     }
   }
@@ -337,6 +403,7 @@
   }
 
   function clickPreviousButton() {
+    if (isContextInvalidated) return false;
     const selectors = [
       'ytmusic-player-bar .previous-button',
       'ytmusic-player-bar [aria-label*="Previous"]',
@@ -358,6 +425,7 @@
   }
 
   function togglePlayPause() {
+    if (isContextInvalidated) return false;
     const media = getMainMedia();
     if (media) {
       if (media.paused) {
@@ -393,10 +461,20 @@
   let lastThumbnailUrl = '';
 
   function checkPlaybackEnd() {
+    if (isContextInvalidated || !chrome.runtime?.id) {
+      handleContextInvalidated();
+      return;
+    }
     const media = getMainMedia();
     if (media && media !== lastMedia) {
       lastMedia = media;
-      media.addEventListener('ended', () => clickNextButton(), { passive: true });
+      media.addEventListener('ended', () => {
+        if (isContextInvalidated || !chrome.runtime?.id) {
+          handleContextInvalidated();
+          return;
+        }
+        clickNextButton();
+      }, { passive: true });
       sendVideoInfo(getVideoInfo(), 'media-ready');
     }
 
@@ -411,13 +489,23 @@
   }
 
   document.addEventListener('ended', (event) => {
+    if (isContextInvalidated || !chrome.runtime?.id) {
+      handleContextInvalidated();
+      return;
+    }
     if (event.target instanceof HTMLMediaElement) clickNextButton();
   }, true);
+
   document.addEventListener('yt-navigate-finish', () => {
+    if (isContextInvalidated || !chrome.runtime?.id) {
+      handleContextInvalidated();
+      return;
+    }
     checkPlaybackEnd();
     sendVideoInfo(getVideoInfo(), 'navigation');
   }, { passive: true });
-  setInterval(checkPlaybackEnd, 1500);
+
+  playbackInterval = setInterval(checkPlaybackEnd, 1500);
   checkPlaybackEnd();
   sendVideoInfo(getVideoInfo(), 'initial');
 })();
